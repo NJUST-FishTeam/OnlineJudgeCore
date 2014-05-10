@@ -10,13 +10,13 @@
  *      正值: 表示可被调用的次数, 每次调用后会减一(比如fork)
  *      零值: 表示禁止调用(比如open)
  *      负值: 表示不限制该syscall(比如write)
- * 
+ *
  * RF_table的初始化由init_RF_table函数完成
  */
 short RF_table[1024] = {0};
 
 /*
- * RF_* 数组对是用于初始化RF_table的数据来源, 
+ * RF_* 数组对是用于初始化RF_table的数据来源,
  * 每两个数字为一组k/v: syscall_id:次数
  *   次数 < 0 表示不限制
  *   次数 > 0 表示可调用次数, 运行时每调用一次减一
@@ -75,7 +75,7 @@ int RF_CPP[512] =
 };
 
 //Pascal
-int RF_PASCAL[512] = 
+int RF_PASCAL[512] =
 {
     SYS_close,          -1,
     SYS_execve,         1,
@@ -98,7 +98,7 @@ int RF_PASCAL[512] =
 };
 
 //Java (TODO暂未测试)
-int RF_JAVA[512] = 
+int RF_JAVA[512] =
 {
     SYS_access,         -1,
     SYS_brk,            -1,
@@ -163,7 +163,7 @@ int RF_C[512] =
     -1
 };
 
-int RF_CPP[512] = 
+int RF_CPP[512] =
 {
     SYS_access,         -1,
     SYS_arch_prctl,     -1,
@@ -188,7 +188,7 @@ int RF_CPP[512] =
     -1
 };
 
-int RF_PASCAL[512] = 
+int RF_PASCAL[512] =
 {
     SYS_close,          -1,
     SYS_execve,         1,
@@ -210,7 +210,7 @@ int RF_PASCAL[512] =
     -1
 };
 
-int RF_JAVA[512] = 
+int RF_JAVA[512] =
 {
     SYS_access,         -1,
     SYS_arch_prctl,     -1,
