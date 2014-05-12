@@ -1,5 +1,6 @@
 *.sublime-project
 *.sublime-workspace
 *.o
+*.out
 Core
 test/

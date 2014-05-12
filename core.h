@@ -13,9 +13,9 @@ int STACK_SIZE_LIMIT   = 8192;  //程序运行的栈空间大小
 
 int TIME_LIMIT_ADDTION = 0;  //运行时间附加值
 
-int JAVA_TIME_FACTOR   = 2;  //JAVA语言的运行时间放宽倍数
+int JAVA_TIME_FACTOR   = 3;  //JAVA语言的运行时间放宽倍数
 
-int JAVA_MEM_FACTOR    = 2;  //JAVA语言的运行内存放宽倍数
+int JAVA_MEM_FACTOR    = 3;  //JAVA语言的运行内存放宽倍数
 
 //------------------以下是常量----------------------
 
@@ -26,6 +26,8 @@ const int TLE     = 2;  //超时
 const int MLE     = 3;  //超内存限制
 const int OLE     = 4;  //输出文件超过大小限制
 const int RE      = 5;  //运行时错误，包括数组越界、非法调用等
+const int WA      = 6;
+const int AC      = 7;
 
 //一些常量
 const int KILO = 1024;
@@ -62,14 +64,17 @@ const int LANG_JAVA    = 3;
 
 namespace PROBLEM
 {
- 
+
 int id           = 0;
 int lang         = 0;
+int spj_lang     = 0;
 int time_limit   = 1000;   //MS
 int memory_limit = 65535;  //KB
 int output_limit = 1024000; //KB
 int result       = 0;
 int status;
+
+bool spj = false;
 
 long memory_usage = 0;
 int time_usage    = 0;
@@ -80,11 +85,15 @@ int time_usage    = 0;
 // std::string output_data;  //输出文件路径
 // std::string result_data;  //判题结果文件路径
 // std::string run_dir;  //程序的运行空间
+
 std::string code_path;
-std::string program_name = "a.out"
-std::string input_path;
-std::string output_path;
-std::string result_path;
+std::string exec_file;
+std::string input_file;
+std::string output_file;
+std::string exec_output;
+std::string spj_code_file;
+std::string spj_exec_file;
+std::string result_file;
 std::string run_dir;
 }
 
