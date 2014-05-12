@@ -7,7 +7,7 @@ namespace JUDGE_CONF
 {
 int JUDGE_TIME_LIMIT   = 15000;  //judge本身的时间限制（ms）
 
-int COMPILE_TIME_LIMIT = 5000;  //编译时间限制（ms）
+int COMPILE_TIME_LIMIT = 10000;  //编译时间限制（ms）
 
 int STACK_SIZE_LIMIT   = 8192;  //程序运行的栈空间大小
 
@@ -33,6 +33,8 @@ const int AC      = 7;
 const int KILO = 1024;
 const int MEGA = KILO * KILO;
 const int GIGA = KILO * MEGA;
+
+const int GCC_COMPILE_ERROR = 1;
 
 //const int GCC_COMPILE_ERROR = 1;    //编译错误
 //退出原因
@@ -95,6 +97,9 @@ std::string spj_code_file;
 std::string spj_exec_file;
 std::string result_file;
 std::string run_dir;
+
+std::string stdout_file_compiler;
+std::string stderr_file_compiler;
 }
 
 #endif

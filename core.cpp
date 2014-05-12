@@ -26,23 +26,26 @@ bool has_suffix(const std::string &str, const std::string &suffix) {
 }
 
 static
-void parse_arguments(int argc, char** argv) {
+void parse_arguments(int argc, char* argv[]) {
     int opt;
     extern char *optarg;
+    printf("WTF?\n");
 
-    while ((opt = getopt(argc, argv, "c:t:m:s:S:d")) != -1) {
+    while ((opt = getopt(argc, argv, "c:t:m:d:S:s")) != -1) {
+        printf("%c\n", opt);
         switch (opt) {
-            case 'c': PROBLEM::code_path    = optarg;           break;
-            case 't': PROBLEM::time_limit   = atoi(optarg);     break;
-            case 'm': PROBLEM::memory_limit = atoi(optarg);     break;
-            case 's': PROBLEM::spj          = true;             break;
-            case 'S': PROBLEM::spj_code_file= optarg;           break;
-            case 'd': PROBLEM::run_dir      = optarg;           break;
+            case 'c': PROBLEM::code_path    = optarg;         break;
+            case 't': PROBLEM::time_limit   = atoi(optarg);   break;
+            case 'm': PROBLEM::memory_limit = atoi(optarg);   break;
+            case 's': PROBLEM::spj          = true;           break;
+            case 'S': PROBLEM::spj_code_file= optarg;         break;
+            case 'd': PROBLEM::run_dir      = optarg;         break;
             default:
                 printf("unkown option\n");
                 exit(JUDGE_CONF::EXIT_BAD_PARAM);
         }
     }
+
     //PROBLEM::code_path    = argv[1];
     //PROBLEM::time_limit   = atoi(argv[2]);
     //PROBLEM::memory_limit = atoi(argv[3]);
@@ -65,6 +68,8 @@ void parse_arguments(int argc, char** argv) {
     PROBLEM::input_file = PROBLEM::run_dir + "/in.in";
     PROBLEM::output_file = PROBLEM::run_dir + "/out.out";
     PROBLEM::exec_output = PROBLEM::run_dir + "/out.txt";
+    PROBLEM::stdout_file_compiler = PROBLEM::run_dir + "/stdout_file_compiler.txt";
+    PROBLEM::stderr_file_compiler = PROBLEM::run_dir + "/stderr_file_compiler.txt";
 
     if (PROBLEM::lang == JUDGE_CONF::LANG_JAVA) {
         PROBLEM::exec_file = PROBLEM::run_dir + "/Main";
@@ -210,7 +215,7 @@ bool is_valid_syscall(int lang, int syscall_id, pid_t child, user_regs_struct re
             {
                 data.val = ptrace(PTRACE_PEEKDATA, child, addr + i,  NULL);
                 i += LONGSIZE;
-                for (j = 0; j < LONGSIZE && data.chars[j] > 0 && k < 256; j++) 
+                for (j = 0; j < LONGSIZE && data.chars[j] > 0 && k < 256; j++)
                 {
                     filename[k++] = data.chars[j];
                 }
@@ -250,6 +255,102 @@ bool is_valid_syscall(int lang, int syscall_id, pid_t child, user_regs_struct re
     return true;
 }
 
+static
+void compiler_source_code() {
+    pid_t compiler = fork();
+    int status = 0;
+    if (compiler < 0) {
+        printf("fork compiler error\n");
+        exit(JUDGE_CONF::EXIT_COMPILE);
+    }else if (compiler == 0) {
+        //log
+        stdout = freopen(PROBLEM::stdout_file_compiler.c_str(), "w", stdout);
+        stderr = freopen(PROBLEM::stderr_file_compiler.c_str(), "w", stderr);
+        if (stdout == NULL || stderr == NULL) {
+            printf("error freopen stdout, stderr\n");
+            exit(JUDGE_CONF::EXIT_COMPILE);
+        }
+
+        malarm(ITIMER_REAL, JUDGE_CONF::COMPILE_TIME_LIMIT);
+        switch (PROBLEM::lang) {
+            case JUDGE_CONF::LANG_C:
+                printf("compiler gcc\n");
+                execlp("gcc", "gcc", "-o", PROBLEM::exec_file.c_str(), PROBLEM::code_path.c_str(),
+                        "-static", "-w", "-lm", "-std=c99", "-O2", "-DONLINE_JUDGE", NULL);
+                break;
+            case JUDGE_CONF::LANG_CPP:
+                printf("compiler g++\n");
+                execlp("g++", "g++", "-o", PROBLEM::exec_file.c_str(), PROBLEM::code_path.c_str(),
+                        "-static", "-w", "-lm", "-O2", "-DONLINE_JUDGE", NULL);
+                break;
+            case JUDGE_CONF::LANG_JAVA:
+                printf("compiler java\n");
+                execlp("javac", "javac", PROBLEM::code_path.c_str(), "-d", PROBLEM::run_dir.c_str(), NULL);
+        }
+        printf("exec error");
+        exit(JUDGE_CONF::EXIT_COMPILE);
+    }else {
+        pid_t w = waitpid(compiler, &status, WUNTRACED);
+        if (w == -1) {
+            printf("waitpid error\n");
+            exit(JUDGE_CONF::EXIT_COMPILE);
+        }
+
+        printf("compiler finished\n");
+        if (WIFEXITED(status)) {
+            if (EXIT_SUCCESS == WEXITSTATUS(status)) {
+                printf("compile succeeded.\n");
+            }else if (JUDGE_CONF::GCC_COMPILE_ERROR == WEXITSTATUS(status)){
+                printf("compile error\n");
+                output_result(JUDGE_CONF::CE);
+                exit(JUDGE_CONF::EXIT_OK);
+            }else {
+                printf("compiler unkown exit status %d\n", WEXITSTATUS(status));
+                exit(JUDGE_CONF::EXIT_COMPILE);
+            }
+        }else {
+            if (WIFSIGNALED(status)){
+                if (SIGALRM == WTERMSIG(status)) {
+                    printf("compiler time out\n");
+                    output_result(JUDGE_CONF::CE);
+                    exit(JUDGE_CONF::EXIT_OK);
+                }else {
+                    printf("unkown signal\n");
+                }
+            }else if (WIFSTOPPED(status)){
+                printf("stopped by signal\n");
+            }else {
+                printf("unknown stop reason");
+            }
+            exit(JUDGE_CONF::EXIT_COMPILE);
+        }
+    }
+}
+
 int main(int argc, char *argv[]) {
+
+    if (geteuid() != 0) {
+        printf("must run as root\n");
+        exit(JUDGE_CONF::EXIT_UNPRIVILEGED);
+    }
+
+    printf("Yes, i am root now\n");
+
+    parse_arguments(argc, argv);
+
+    printf("yes, ok , i have get the arguments\n");
+
+    JUDGE_CONF::JUDGE_TIME_LIMIT += PROBLEM::time_limit;
+
+    printf("%d\n", JUDGE_CONF::JUDGE_TIME_LIMIT);
+
+    if (EXIT_SUCCESS != malarm(ITIMER_REAL, JUDGE_CONF::JUDGE_TIME_LIMIT)) {
+        printf("set alarm for judge failed, %d: %s\n", errno, strerror(errno));
+        exit(JUDGE_CONF::EXIT_VERY_FIRST);
+    }
+    signal(SIGALRM, timeout);
+
+    compiler_source_code();
+
     return 0;
 }
