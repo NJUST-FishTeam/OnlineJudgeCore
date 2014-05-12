@@ -16,6 +16,7 @@ extern "C"
 #include <sys/ptrace.h>
 }
 #include "core.h"
+#include "rf_table.h"
 
 extern int errno;
 
@@ -327,6 +328,149 @@ void compiler_source_code() {
     }
 }
 
+static
+void judge() {
+    struct rusage rused;
+    pid_t executive = fork();
+    if (executive < 0) {
+        printf("fork for child failed\n");
+        exit(JUDGE_CONF::EXIT_PRE_JUDGE);
+    }else if (executive == 0) {
+        //log
+
+        io_redirect();
+
+        security_control();
+
+        int real_time_limit = PROBLEM::time_limit;
+        if (EXIT_SUCCESS != malarm(ITIMER_REAL, real_time_limit)) {
+            printf("malarm failed\n");
+            exit(JUDGE_CONF::EXIT_PRE_JUDGE);
+        }
+
+        //log
+        set_limit();
+
+        if (ptrace(PTRACE_TRACEME, 0, NULL, NULL) < 0) {
+            exit(JUDGE_CONF::EXIT_PRE_JUDGE_PTRACE);
+        }
+
+        if (PROBLEM::lang != JUDGE_CONF::LANG_JAVA){
+            execl("./a.out", "a.out", NULL);
+        }else {
+            execlp("java", "java", "Main", NULL);
+        }
+
+        exit(JUDGE_CONF::EXIT_PRE_JUDGE_EXECLP);
+    }else {
+        int status = 0;
+        int syscall_id = 0;
+        struct user_regs_struct regs;
+
+        init_RF_table(PROBLEM::lang);
+
+        while (true) {
+            if (wait4(executive, &status, 0, &rused) < 0) {
+                printf("wait4 failed\n");
+                exit(JUDGE_CONF::EXIT_JUDGE);
+            }
+
+            if (WIFEXITED(status)){
+                if (PROBLEM::lang != JUDGE_CONF::LANG_JAVA ||
+                    WEXITSTATUS(status) == EXIT_SUCCESS) {
+                    printf("normal quit\n");
+
+                    PROBLEM::result = JUDGE_CONF::PROCEED;
+                }else {
+                    printf("abnormal quit\n");
+                    PROBLEM::result = JUDGE_CONF::RE;
+                }
+                break;
+            }
+
+            if (WIFSIGNALED(status) ||
+                (WIFSTOPPED(status) && WSTOPSIG(status) != SIGTRAP)) {
+                int signo = 0;
+                if (WIFSIGNALED(status)) {
+                    signo = WTERMSIG(status);
+                    printf("child signaled by %d : %s\n", signo, strsignal(signo));
+                }else {
+                    signo = WSTOPSIG(status);
+                    printf("child stop by %d : %s\n", signo, strsignal(signo));
+                }
+
+                switch (signo) {
+                    //TLE
+                    case SIGALRM:
+                    case SIGXCPU:
+                    case SIGVTALRM:
+                    case SIGKILL:
+                        printf("time limit exeeded\n");
+                        PROBLEM::result = JUDGE_CONF::TLE;
+                        break;
+                    case SIGXFSZ:
+                        printf("file limit exceeded");
+                        PROBLEM::result = JUDGE_CONF::OLE;
+                        break;
+                    case SIGSEGV:
+                    case SIGFPE:
+                    case SIGBUS:
+                    case SIGABRT:
+                        PROBLEM::result = JUDGE_CONF::RE;
+                        break;
+                    default:
+                        PROBLEM::result = JUDGE_CONF::RE;
+                        break;
+                }
+
+                ptrace(PTRACE_KILL, executive, NULL, NULL);
+                break;
+            }
+
+            //MLE
+            PROBLEM::memory_usage = std::max(PROBLEM::memory_usage,
+                    rused.ru_minflt * (getpagesize() / JUDGE_CONF::KILO));
+
+            if (PROBLEM::memory_usage > PROBLEM::memory_limit) {
+                PROBLEM::result = JUDGE_CONF::MLE;
+                printf("MLE\n");
+                ptrace(PTRACE_KILL, executive, NULL, NULL);
+                break;
+            }
+
+            if (ptrace(PTRACE_GETREGS, executive, NULL, &regs) < 0) {
+                printf("ptrace PTRACE_GETREGS failed\n");
+                exit(JUDGE_CONF::EXIT_JUDGE);
+            }
+
+#ifdef __i386__
+            syscall_id = regs.orig_eax;
+#else
+            syscall_id = regs.orig_rax;
+#endif
+
+            if (syscall_id > 0 &&
+                !is_valid_syscall(PROBLEM::lang, syscall_id, executive, regs)) {
+                printf("restricted fuction\n");
+                PROBLEM::result = JUDGE_CONF::RE;
+                ptrace(PTRACE_KILL, executive, NULL, NULL);
+                break;
+            }
+
+            if (ptrace(PTRACE_SYSCALL, executive, NULL, NULL) < 0) {
+                printf("ptrace PTRACE_SYSCALL failed\n");
+                exit(JUDGE_CONF::EXIT_JUDGE);
+            }
+        }
+    }
+
+    PROBLEM::time_usage += (rused.ru_utime.tv_sec * 1000 +
+                            rused.ru_utime.tv_usec / 1000);
+    PROBLEM::time_usage += (rused.ru_stime.tv_sec * 1000 +
+                            rused.ru_stime.tv_usec / 1000);
+
+}
+
 int main(int argc, char *argv[]) {
 
     if (geteuid() != 0) {
@@ -351,6 +495,10 @@ int main(int argc, char *argv[]) {
     signal(SIGALRM, timeout);
 
     compiler_source_code();
+
+    judge();
+
+    output_result(PROBLEM::result);
 
     return 0;
 }

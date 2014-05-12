@@ -81,13 +81,6 @@ bool spj = false;
 long memory_usage = 0;
 int time_usage    = 0;
 
-// std::string run;  //运行程序路径
-// std::string program_name;  //运行程序文件名
-// std::string input_data;  //输入文件路径
-// std::string output_data;  //输出文件路径
-// std::string result_data;  //判题结果文件路径
-// std::string run_dir;  //程序的运行空间
-
 std::string code_path;
 std::string exec_file;
 std::string input_file;
