@@ -142,6 +142,7 @@ int RF_JAVA[512] =
 #elif defined __x86_64__
 int RF_C[512] =
 {
+    SYS_access,         -1,
     SYS_arch_prctl,     -1,
     SYS_brk,            -1,
     SYS_close,          -1,
@@ -160,7 +161,8 @@ int RF_C[512] =
     SYS_uname,          -1,
     SYS_write,          -1,
     SYS_writev,         -1,
-	201,				-1,
+    SYS_time,           -1,
+    SYS_readlink,       -1,
     -1
 };
 
@@ -185,7 +187,8 @@ int RF_CPP[512] =
     SYS_uname,          -1,
     SYS_write,          -1,
     SYS_writev,         -1,
-	201,				-1,
+    SYS_time,           -1,
+    SYS_readlink,       -1,
     -1
 };
 
@@ -208,6 +211,8 @@ int RF_PASCAL[512] =
     SYS_uname,          -1,
     SYS_write,          -1,
     SYS_writev,         -1,
+    SYS_time,           -1,
+    SYS_readlink,       -1,
     -1
 };
 
@@ -244,6 +249,8 @@ int RF_JAVA[512] =
     SYS_uname,          -1,
     SYS_write,          -1,
     SYS_writev,         -1,
+    SYS_time,           -1,
+    SYS_readlink,       -1,
     -1
 };
 #endif

@@ -90,8 +90,8 @@ int malarm(int which, int milliseconds) {
 static
 void io_redirect() {
     stdin = freopen(PROBLEM::input_file.c_str(), "r", stdin);
-    stdout = freopen(PROBLEM::output_file.c_str(), "w", stdout);
-    stderr = freopen("/dev/null", "w", stderr);
+    stdout = freopen(PROBLEM::exec_output.c_str(), "w", stdout);
+    //stderr = freopen("/dev/null", "w", stderr);
 
     if (stdin == NULL || stdout == NULL || stderr == NULL) {
         printf("freopen error\n");
@@ -439,6 +439,7 @@ void judge() {
 #else
             syscall_id = regs.orig_rax;
 #endif
+            //printf("The child made a system call %llu\n", regs.orig_rax);
 
             if (syscall_id > 0 &&
                 !is_valid_syscall(PROBLEM::lang, syscall_id, executive, regs)) {
