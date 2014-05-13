@@ -30,10 +30,8 @@ static
 void parse_arguments(int argc, char* argv[]) {
     int opt;
     extern char *optarg;
-    printf("WTF?\n");
 
     while ((opt = getopt(argc, argv, "c:t:m:d:S:s")) != -1) {
-        printf("%c\n", opt);
         switch (opt) {
             case 'c': PROBLEM::code_path    = optarg;         break;
             case 't': PROBLEM::time_limit   = atoi(optarg);   break;
@@ -46,13 +44,6 @@ void parse_arguments(int argc, char* argv[]) {
                 exit(JUDGE_CONF::EXIT_BAD_PARAM);
         }
     }
-
-    //PROBLEM::code_path    = argv[1];
-    //PROBLEM::time_limit   = atoi(argv[2]);
-    //PROBLEM::memory_limit = atoi(argv[3]);
-    //PROBLEM::input_path   = argv[4];
-    //PROBLEM::output_path  = argv[5];
-    //PROBLEM::result_path  = argv[6];
 
     if (has_suffix(PROBLEM::code_path, ".cpp")){
         PROBLEM::lang = JUDGE_CONF::LANG_CPP;
@@ -451,7 +442,13 @@ void judge() {
 
             if (syscall_id > 0 &&
                 !is_valid_syscall(PROBLEM::lang, syscall_id, executive, regs)) {
-                printf("restricted fuction\n");
+                printf("restricted fuction %d\n", syscall_id);
+                if (syscall_id == SYS_rt_sigprocmask){
+                    printf("glibc failed\n");
+                }else{
+                    printf("%d\n", SYS_write);
+                    printf("rf table\n");
+                }
                 PROBLEM::result = JUDGE_CONF::RE;
                 ptrace(PTRACE_KILL, executive, NULL, NULL);
                 break;
@@ -478,15 +475,9 @@ int main(int argc, char *argv[]) {
         exit(JUDGE_CONF::EXIT_UNPRIVILEGED);
     }
 
-    printf("Yes, i am root now\n");
-
     parse_arguments(argc, argv);
 
-    printf("yes, ok , i have get the arguments\n");
-
     JUDGE_CONF::JUDGE_TIME_LIMIT += PROBLEM::time_limit;
-
-    printf("%d\n", JUDGE_CONF::JUDGE_TIME_LIMIT);
 
     if (EXIT_SUCCESS != malarm(ITIMER_REAL, JUDGE_CONF::JUDGE_TIME_LIMIT)) {
         printf("set alarm for judge failed, %d: %s\n", errno, strerror(errno));
