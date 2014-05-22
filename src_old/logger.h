@@ -12,17 +12,17 @@
  *
  * Usage:
  *   //Open log file first. Supply a log file name.
- *   log_open("log.txt"); 
- *   
+ *   log_open("log.txt");
+ *
  *   //use it just as printf
- *   FM_LOG_TRACE("some info %d", 123); 
- *   
+ *   FM_LOG_TRACE("some info %d", 123);
+ *
  *   //6 level: DEBUG, TRACE, NOTICE, MONITOR, WARNING, FATAL
- *   FM_LOG_DEBUG("hi there"); 
- *   
+ *   FM_LOG_DEBUG("hi there");
+ *
  *   //Need EXTRA_INFO to be logged automatically?
  *   log_add_info("pid:123");
- *   
+ *
  *   //You don't need to call log_close manually, it'll be called at exit
  *   log_close();
  *
@@ -51,7 +51,7 @@ const int LOG_MONITOR       = 2;
 const int LOG_NOTICE        = 3;
 const int LOG_TRACE         = 4;
 const int LOG_DEBUG         = 5;
-static char LOG_LEVEL_NOTE[][10] = 
+static char LOG_LEVEL_NOTE[][10] =
 { "FATAL", "WARNING", "MONITOR", "NOTICE", "TRACE", "DEBUG" };
 #define FM_LOG_DEBUG(x...)   log_write(LOG_DEBUG, __FILE__, __LINE__, ##x)
 #define FM_LOG_TRACE(x...)   log_write(LOG_TRACE, __FILE__, __LINE__, ##x)
@@ -123,12 +123,12 @@ static void log_write(int level, const char *file,
     strftime(datetime, 99, "%Y-%m-%d %H:%M:%S", localtime(&now));
     snprintf(line_str, 19, "%d", line);
     va_list ap;
-    va_start(ap, fmt);   
-    vsnprintf(log_buffer, log_buffer_size, fmt, ap);   
-    va_end(ap);   
+    va_start(ap, fmt);
+    vsnprintf(log_buffer, log_buffer_size, fmt, ap);
+    va_end(ap);
 
     size_t count = snprintf(buffer, log_buffer_size,
-            "%s\n [%s]\n [%s:%d]%s\n %s\n", 
+            "%s\n [%s]\n [%s:%d]%s\n %s\n",
             LOG_LEVEL_NOTE[level], datetime, file, line, log_extra_info, log_buffer);
     int log_fd = log_fp->_fileno;
     //puts(buffer);

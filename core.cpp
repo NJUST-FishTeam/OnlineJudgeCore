@@ -16,7 +16,6 @@ extern "C"
 #include <sys/ptrace.h>
 }
 #include "core.h"
-#include "rf_table.h"
 
 extern int errno;
 
@@ -366,7 +365,7 @@ void judge() {
                 exit(JUDGE_CONF::EXIT_JUDGE);
             }
 
-            if (WIFEXITED(status)){
+            if (WIFEXITED(status)) {
                 if (PROBLEM::lang != JUDGE_CONF::LANG_JAVA ||
                     WEXITSTATUS(status) == EXIT_SUCCESS) {
                     printf("normal quit\n");
@@ -429,6 +428,7 @@ void judge() {
                 break;
             }
 
+            //GET REGS
             if (ptrace(PTRACE_GETREGS, executive, NULL, &regs) < 0) {
                 printf("ptrace PTRACE_GETREGS failed\n");
                 exit(JUDGE_CONF::EXIT_JUDGE);
@@ -443,11 +443,11 @@ void judge() {
 
             if (syscall_id > 0 &&
                 !is_valid_syscall(PROBLEM::lang, syscall_id, executive, regs)) {
-                printf("restricted fuction %d\n", syscall_id);
+                //printf("restricted fuction %d\n", syscall_id);
                 if (syscall_id == SYS_rt_sigprocmask){
                     printf("glibc failed\n");
                 }else{
-                    printf("%d\n", SYS_write);
+                    //printf("%d\n", SYS_write);
                     printf("rf table\n");
                 }
                 PROBLEM::result = JUDGE_CONF::RE;
@@ -467,6 +467,95 @@ void judge() {
     PROBLEM::time_usage += (rused.ru_stime.tv_sec * 1000 +
                             rused.ru_stime.tv_usec / 1000);
 
+}
+
+static
+int compare_output(std::string file_std, std::string file_exec) {
+    FILE *fp_std = fopen(file_std.c_str(), "r");
+    if (fp_std == NULL) {
+        printf("open standard output failed.\n");
+        exit(JUDGE_CONF::EXIT_COMPARE);
+    }
+
+    FILE *fp_exe = fopen(file_exec.c_str(), "r");
+    if (fp_exe == NULL) {
+        printf("open executive output failed\n");
+        exit(JUDGE_CONF::EXIT_COMPARE);
+    }
+    int a, b, Na = 0, Nb = 0;
+    enum {
+        AC = JUDGE_CONF::AC,
+        PE = JUDGE_CONF::PE,
+        WA = JUDGE_CONF::WA
+    }status = AC;
+    while (true) {
+        a = fgetc(fp_std);
+        b = fgetc(fp_exe);
+        Na++, Nb++;
+
+        //统一\r和\n之间的区别
+        if (a == '\r') a = '\n';
+        if (b == '\r') b = '\n';
+#define is_space_char(a) ((a == ' ') || (a == '\t') || (a == '\n'))
+
+        if (feof(fp_std) && feof(fp_exe)){
+            //文件结束
+            break;
+        }else if (feof(fp_std) || feof(fp_exe)) {
+            //如果只有一个文件结束
+            //但是另一个文件的末尾是回车
+            //那么也当做AC处理
+            FILE *fp_tmp;
+            if (feof(fp_std)) {
+                if (!is_space_char(b)) {
+                    printf("WA\n");
+                    status = WA;
+                    break;
+                }
+                fp_tmp = fp_exe;
+            }else {
+                if (!is_space_char(a)) {
+                    printf("WA\n");
+                    status = WA;
+                    break;
+                }
+                fp_tmp = fp_std;
+            }
+            int c;
+            while (c = fgetc(fp_tmp), c != EOF) {
+                if (c == '\r') c = '\n';
+                if (!is_space_char(c)) {
+                    printf("WA\n");
+                    break;
+                }
+            }
+            break;
+        }
+
+        //如果两个字符不同
+        if (a != b) {
+            status = PE;
+            //过滤空白字符
+            if (is_space_char(a) && is_space_char(b)) {
+                continue;
+            }
+            if (is_space_char(a)) {
+                //a是空白字符，过滤，退回b以便下一轮循环
+                ungetc(b, fp_exe);
+                Nb--;
+            }else if (is_space_char(b)) {
+                ungetc(a, fp_std);
+                Na--;
+            }else {
+                printf("WA\n");
+                status = WA;
+                break;
+            }
+        }
+    }
+    fclose(fp_std);
+    fclose(fp_exe);
+    return status;
 }
 
 int main(int argc, char *argv[]) {

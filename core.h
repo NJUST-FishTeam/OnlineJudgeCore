@@ -28,6 +28,7 @@ const int OLE     = 4;  //输出文件超过大小限制
 const int RE      = 5;  //运行时错误，包括数组越界、非法调用等
 const int WA      = 6;
 const int AC      = 7;
+const int PE      = 8;
 
 //一些常量
 const int KILO = 1024;
