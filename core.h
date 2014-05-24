@@ -75,19 +75,19 @@ int time_limit   = 1000;   //MS
 int memory_limit = 65535;  //KB
 int output_limit = 1024000; //KB
 int result       = 0;
-int status;
+long memory_usage = 0;
+int time_usage    = 0;
+std::string extra_message;
+std::string status;
 
 bool spj = false;
 
-long memory_usage = 0;
-int time_usage    = 0;
 
 std::string code_path;
 std::string exec_file;
 std::string input_file;
 std::string output_file;
 std::string exec_output;
-std::string spj_code_file;
 std::string spj_exec_file;
 std::string result_file;
 std::string run_dir;

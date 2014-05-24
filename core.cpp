@@ -1,5 +1,3 @@
-extern "C"
-{
 #include <cstdio>
 #include <stdlib.h>
 #include <cstring>
@@ -14,7 +12,7 @@ extern "C"
 #include <sys/syscall.h>
 #include <sys/resource.h>
 #include <sys/ptrace.h>
-}
+
 #include "core.h"
 
 extern int errno;
@@ -36,7 +34,7 @@ void parse_arguments(int argc, char* argv[]) {
             case 't': PROBLEM::time_limit   = atoi(optarg);   break;
             case 'm': PROBLEM::memory_limit = atoi(optarg);   break;
             case 's': PROBLEM::spj          = true;           break;
-            case 'S': PROBLEM::spj_code_file= optarg;         break;
+            case 'S': PROBLEM::spj_lang     = atoi(optarg);   break;
             case 'd': PROBLEM::run_dir      = optarg;         break;
             default:
                 printf("unkown option\n");
@@ -59,6 +57,7 @@ void parse_arguments(int argc, char* argv[]) {
     PROBLEM::input_file = PROBLEM::run_dir + "/in.in";
     PROBLEM::output_file = PROBLEM::run_dir + "/out.out";
     PROBLEM::exec_output = PROBLEM::run_dir + "/out.txt";
+    PROBLEM::result_file = PROBLEM::run_dir + "/result.txt";
     PROBLEM::stdout_file_compiler = PROBLEM::run_dir + "/stdout_file_compiler.txt";
     PROBLEM::stderr_file_compiler = PROBLEM::run_dir + "/stderr_file_compiler.txt";
 
@@ -66,6 +65,17 @@ void parse_arguments(int argc, char* argv[]) {
         PROBLEM::exec_file = PROBLEM::run_dir + "/Main";
         PROBLEM::time_limit *= JUDGE_CONF::JAVA_TIME_FACTOR;
         PROBLEM::memory_limit *= JUDGE_CONF::JAVA_MEM_FACTOR;
+    }
+
+    if (PROBLEM::spj) {
+        switch (PROBLEM::spj_lang) {
+            case 1:
+            case 2: PROBLEM::spj_exec_file = PROBLEM::run_dir + "/SpecialJudge";break;
+            case 3: PROBLEM::spj_exec_file = PROBLEM::run_dir + "/SpecialJudge";break;
+            default:
+                printf("Unknown special judge language\n");
+                exit(JUDGE_CONF::EXIT_BAD_PARAM);
+        }
     }
 }
 
@@ -176,8 +186,24 @@ void set_limit() {
 }
 
 static
-void output_result(int result, int time_usage = 0, int memory_usage = 0) {
+void output_result(int result, int time_usage = 0, int memory_usage = 0, std::string extra_message = "") {
     printf("%d %d %d\n", result, time_usage, memory_usage);
+    FILE* result_file = fopen(PROBLEM::result_file.c_str(), "w");
+    switch (result){
+        case 1:PROBLEM::status = "Compile Error";break;
+        case 2:PROBLEM::status = "Time Limit Exceeded";break;
+        case 3:PROBLEM::status = "Memory Limit Exceeded";break;
+        case 4:PROBLEM::status = "Output Limit Exceeded";break;
+        case 5:PROBLEM::status = "Runtime Error";break;
+        case 6:PROBLEM::status = "Wrong Answer";break;
+        case 7:PROBLEM::status = "Accepted";break;
+        case 8:PROBLEM::status = "Presentation Error";break;
+        default:PROBLEM::status = "System Error";break;
+    }
+    fprintf(result_file, "%s\n", PROBLEM::status.c_str());
+    fprintf(result_file, "%d\n", time_usage);
+    fprintf(result_file, "%d\n", memory_usage);
+    fprintf(result_file, "%s\n", extra_message.c_str());
 }
 
 #include "rf_table.h"
