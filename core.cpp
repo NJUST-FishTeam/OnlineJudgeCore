@@ -145,6 +145,38 @@ void security_control() {
 }
 
 static
+void security_control_spj() {
+    struct passwd *nobody = getpwnam("nobody");
+    if (nobody == NULL) {
+        printf("no user name nobody\n");
+        exit(JUDGE_CONF::EXIT_SET_SECURITY);
+    }
+
+    if (EXIT_SUCCESS != chdir(PROBLEM::run_dir.c_str())) {
+        printf("chdir failed\n");
+        exit(JUDGE_CONF::EXIT_SET_SECURITY);
+    }
+
+    char cwd[1024], *tmp = getcwd(cwd, 1024);
+    if (tmp == NULL) {
+        printf("getcwd failed\n");
+        exit(JUDGE_CONF::EXIT_SET_SECURITY);
+    }
+
+    if (PROBLEM::spj_lang != JUDGE_CONF::LANG_JAVA) {
+        if (EXIT_SUCCESS != chroot(cwd)) {
+            printf("chroot failed\n");
+            exit(JUDGE_CONF::EXIT_SET_SECURITY);
+        }
+    }
+
+    if (EXIT_SUCCESS != setuid(nobody->pw_uid)) {
+        printf("set uid failed\n");
+        exit(JUDGE_CONF::EXIT_SET_SECURITY);
+    }
+}
+
+static
 void set_limit() {
     rlimit lim;
 
@@ -589,6 +621,7 @@ static
 void run_spj() {
     printf("start spj\n");
     pid_t spj_pid = fork();
+    int status = 0;
     if (spj_pid < 0) {
         printf("fork for spj failed\n");
         exit(JUDGE_CONF::EXIT_COMPARE_SPJ);
@@ -606,7 +639,29 @@ void run_spj() {
             exit(JUDGE_CONF::EXIT_COMPARE_SPJ);
         }
 
-        
+        security_control_spj();
+        //log_close();
+
+        execlp("SpecialJudge", "SpecialJudge", NULL);
+
+        exit(JUDGE_CONF::EXIT_COMPARE_SPJ_FORK);
+    } else {
+        if (wait4(spj_pid, &status, 0, NULL) < 0) {
+            printf("wait4 failed\n");
+            exit(JUDGE_CONF::EXIT_COMPARE_SPJ);
+        }
+
+        if (WIFEXITED(status)) {
+            if (WEXITSTATUS(status) == EXIT_SUCCESS) {
+                return ;
+            } else {
+                printf("spj abnormal termination\n");
+            }
+        } else if (WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM) {
+            printf("spj time out\n");
+        } else {
+            printf("unkown termination\n");
+        }
     }
 }
 
