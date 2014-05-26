@@ -77,6 +77,8 @@ void parse_arguments(int argc, char* argv[]) {
                 printf("Unknown special judge language\n");
                 exit(JUDGE_CONF::EXIT_BAD_PARAM);
         }
+
+        PROBLEM::spj_output_file = PROBLEM::run_dir + "/spj_output.txt";
     }
 }
 
@@ -642,7 +644,11 @@ void run_spj() {
         security_control_spj();
         //log_close();
 
-        execlp("SpecialJudge", "SpecialJudge", NULL);
+        if (PROBLEM::spj_lang != JUDGE_CONF::LANG_JAVA) {
+            execl("./SpecialJudge", "SpecialJudge", NULL);
+        } else {
+            execlp("java", "java", "SpecialJudge", NULL);
+        }
 
         exit(JUDGE_CONF::EXIT_COMPARE_SPJ_FORK);
     } else {
@@ -653,9 +659,10 @@ void run_spj() {
 
         if (WIFEXITED(status)) {
             if (WEXITSTATUS(status) == EXIT_SUCCESS) {
+                printf("spj normal quit\n");
                 return ;
             } else {
-                printf("spj abnormal termination\n");
+                printf("spj abnormal termination %d\n", WEXITSTATUS(status));
             }
         } else if (WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM) {
             printf("spj time out\n");
@@ -685,6 +692,8 @@ int main(int argc, char *argv[]) {
     compiler_source_code();
 
     judge();
+
+    run_spj();
 
     output_result(PROBLEM::result);
 
