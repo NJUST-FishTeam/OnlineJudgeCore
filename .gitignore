@@ -3,5 +3,6 @@
 *.o
 *.out
 *.sh
+*.txt
 Core
 test/

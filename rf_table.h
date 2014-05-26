@@ -1,10 +1,11 @@
 #ifndef __RF_TABLE__
 #define __RF_TABLE__
 
-#include "core.h"
 #include <string.h>
 #include <sys/syscall.h>
 
+#include "core.h"
+#include "logger.h"
 /*
  * RF_table 每个值对应的是该syscall可被调用的次数
  *    取值有3种:
@@ -188,7 +189,7 @@ int RF_CPP[512] =
     SYS_write,          -1,
     SYS_writev,         -1,
     SYS_time,           -1,
-    SYS_readlink,       -1,
+    SYS_readlink,       -1, //原本ubuntu 12.04不需要这一条
     -1
 };
 
@@ -274,7 +275,7 @@ void init_RF_table(int lang)
         //    p = RF_PASCAL;
         //    break;
         default:
-            //FM_LOG_WARNING("unknown lang: %d", lang);
+            FM_LOG_WARNING("Unknown language: %d", lang);
             break;
     }
     memset(RF_table, 0, sizeof(RF_table));
