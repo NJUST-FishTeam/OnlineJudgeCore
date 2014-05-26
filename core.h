@@ -9,6 +9,8 @@ int JUDGE_TIME_LIMIT   = 15000;  //judge本身的时间限制（ms）
 
 int COMPILE_TIME_LIMIT = 10000;  //编译时间限制（ms）
 
+int SPJ_TIME_LIMIT     = 10000; //SpecialJudge的时间限制(MS)
+
 int STACK_SIZE_LIMIT   = 8192;  //程序运行的栈空间大小
 
 int TIME_LIMIT_ADDTION = 0;  //运行时间附加值
@@ -89,6 +91,7 @@ std::string input_file;
 std::string output_file;
 std::string exec_output;
 std::string spj_exec_file;
+std::string spj_output_file;
 std::string result_file;
 std::string run_dir;
 

@@ -1,6 +1,7 @@
 #include <cstdio>
-#include <stdlib.h>
+#include <cstdlib>
 #include <cstring>
+
 #include <unistd.h>
 #include <errno.h>
 #include <pwd.h>
@@ -582,6 +583,31 @@ int compare_output(std::string file_std, std::string file_exec) {
     fclose(fp_std);
     fclose(fp_exe);
     return status;
+}
+
+static
+void run_spj() {
+    printf("start spj\n");
+    pid_t spj_pid = fork();
+    if (spj_pid < 0) {
+        printf("fork for spj failed\n");
+        exit(JUDGE_CONF::EXIT_COMPARE_SPJ);
+    } else if (spj_pid == 0) {
+        printf("spj\n");
+        stdin = freopen(PROBLEM::exec_output.c_str(), "r", stdin);
+        stdout = freopen(PROBLEM::spj_output_file.c_str(), "w", stdout);
+        if (stdin == NULL || stdout == NULL) {
+            printf("failed to open files in spj\n");
+            exit(JUDGE_CONF::EXIT_COMPARE_SPJ);
+        }
+        //SPJ时间限制
+        if (EXIT_SUCCESS != malarm(ITIMER_REAL, JUDGE_CONF::SPJ_TIME_LIMIT)) {
+            printf("spj set time limit failed\n");
+            exit(JUDGE_CONF::EXIT_COMPARE_SPJ);
+        }
+
+        
+    }
 }
 
 int main(int argc, char *argv[]) {
