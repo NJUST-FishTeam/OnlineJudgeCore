@@ -402,6 +402,7 @@ void compiler_source_code() {
                 //printf("compile error\n");
                 FM_LOG_TRACE("compile error");
                 PROBLEM::result = JUDGE_CONF::CE;
+                get_compile_error_message();
                 exit(JUDGE_CONF::EXIT_OK);
             } else {
                 //printf("compiler unkown exit status %d\n", WEXITSTATUS(status));
