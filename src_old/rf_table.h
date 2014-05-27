@@ -1,11 +1,9 @@
 #ifndef __RF_TABLE__
 #define __RF_TABLE__
 
-#include <string.h>
 #include <sys/syscall.h>
-
-#include "core.h"
 #include "logger.h"
+
 /*
  * RF_table 每个值对应的是该syscall可被调用的次数
  *    取值有3种:
@@ -143,7 +141,6 @@ int RF_JAVA[512] =
 #elif defined __x86_64__
 int RF_C[512] =
 {
-    SYS_access,         -1,
     SYS_arch_prctl,     -1,
     SYS_brk,            -1,
     SYS_close,          -1,
@@ -162,8 +159,7 @@ int RF_C[512] =
     SYS_uname,          -1,
     SYS_write,          -1,
     SYS_writev,         -1,
-    SYS_time,           -1,
-    SYS_readlink,       -1,
+	201,				-1,
     -1
 };
 
@@ -188,8 +184,7 @@ int RF_CPP[512] =
     SYS_uname,          -1,
     SYS_write,          -1,
     SYS_writev,         -1,
-    SYS_time,           -1,
-    SYS_readlink,       -1, //原本ubuntu 12.04不需要这一条
+	201,				-1,
     -1
 };
 
@@ -212,8 +207,6 @@ int RF_PASCAL[512] =
     SYS_uname,          -1,
     SYS_write,          -1,
     SYS_writev,         -1,
-    SYS_time,           -1,
-    SYS_readlink,       -1,
     -1
 };
 
@@ -250,8 +243,6 @@ int RF_JAVA[512] =
     SYS_uname,          -1,
     SYS_write,          -1,
     SYS_writev,         -1,
-    SYS_time,           -1,
-    SYS_readlink,       -1,
     -1
 };
 #endif
@@ -262,20 +253,20 @@ void init_RF_table(int lang)
     int *p = NULL;
     switch (lang)
     {
-        case JUDGE_CONF::LANG_C:
+        case judge_conf::LANG_C:
             p = RF_C;
             break;
-        case JUDGE_CONF::LANG_CPP:
+        case judge_conf::LANG_CPP:
             p = RF_CPP;
             break;
-        case JUDGE_CONF::LANG_JAVA:
+        case judge_conf::LANG_JAVA:
             p = RF_JAVA;
             break;
         //case judge_conf::LANG_PASCAL:
         //    p = RF_PASCAL;
         //    break;
         default:
-            FM_LOG_WARNING("Unknown language: %d", lang);
+            FM_LOG_WARNING("unknown lang: %d", lang);
             break;
     }
     memset(RF_table, 0, sizeof(RF_table));
