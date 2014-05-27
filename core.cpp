@@ -1,6 +1,6 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <unistd.h>
 #include <errno.h>
@@ -23,6 +23,31 @@ static
 bool has_suffix(const std::string &str, const std::string &suffix) {
     return str.size() >= suffix.size() &&
            str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
+static
+void output_result() {
+    //printf("%d %d %d\n", result, time_usage, memory_usage);
+    FILE* result_file = fopen(PROBLEM::result_file.c_str(), "w");
+    switch (PROBLEM::result){
+        case 1:PROBLEM::status = "Compile Error";break;
+        case 2:PROBLEM::status = "Time Limit Exceeded";break;
+        case 3:PROBLEM::status = "Memory Limit Exceeded";break;
+        case 4:PROBLEM::status = "Output Limit Exceeded";break;
+        case 5:PROBLEM::status = "Runtime Error";break;
+        case 6:PROBLEM::status = "Wrong Answer";break;
+        case 7:PROBLEM::status = "Accepted";break;
+        case 8:PROBLEM::status = "Presentation Error";break;
+        default:PROBLEM::status = "System Error";break;
+    }
+    fprintf(result_file, "%s\n", PROBLEM::status.c_str());
+    fprintf(result_file, "%d\n", PROBLEM::time_usage);
+    fprintf(result_file, "%d\n", PROBLEM::memory_usage);
+    fprintf(result_file, "%s\n", PROBLEM::extra_message.c_str());
+
+    FM_LOG_TRACE("The final result is %s %d %d %s",
+            PROBLEM::status.c_str(), PROBLEM::time_usage,
+            PROBLEM::memory_usage, PROBLEM::extra_message.c_str());
 }
 
 static
@@ -100,8 +125,9 @@ void get_compile_error_message() {
 
 static
 void timeout(int signo) {
-    if (signo == SIGALRM)
+    if (signo == SIGALRM) {
         exit(JUDGE_CONF::EXIT_TIMEOUT);
+    }
 }
 
 static
@@ -208,7 +234,7 @@ void security_control_spj() {
 }
 
 static
-void set_limit() {
+int set_limit() {
     rlimit lim;
 
     lim.rlim_max = (PROBLEM::time_limit - PROBLEM::time_usage + 999) / 1000 + 1;//硬限制
@@ -252,26 +278,6 @@ void set_limit() {
     }
 }
 
-static
-void output_result(int result, int time_usage = 0, int memory_usage = 0, std::string extra_message = PROBLEM::extra_message) {
-    printf("%d %d %d\n", result, time_usage, memory_usage);
-    FILE* result_file = fopen(PROBLEM::result_file.c_str(), "w");
-    switch (result){
-        case 1:PROBLEM::status = "Compile Error";break;
-        case 2:PROBLEM::status = "Time Limit Exceeded";break;
-        case 3:PROBLEM::status = "Memory Limit Exceeded";break;
-        case 4:PROBLEM::status = "Output Limit Exceeded";break;
-        case 5:PROBLEM::status = "Runtime Error";break;
-        case 6:PROBLEM::status = "Wrong Answer";break;
-        case 7:PROBLEM::status = "Accepted";break;
-        case 8:PROBLEM::status = "Presentation Error";break;
-        default:PROBLEM::status = "System Error";break;
-    }
-    fprintf(result_file, "%s\n", PROBLEM::status.c_str());
-    fprintf(result_file, "%d\n", time_usage);
-    fprintf(result_file, "%d\n", memory_usage);
-    fprintf(result_file, "%s\n", extra_message.c_str());
-}
 
 #include "rf_table.h"
 //系统调用在进和出的时候都会暂停, 把控制权交给judge
@@ -318,7 +324,7 @@ bool is_valid_syscall(int lang, int syscall_id, pid_t child, user_regs_struct re
             }
             if (strstr(filename, "/dev/tty") == filename)
             {
-                //output_result(judge_conf::OJ_RE_SEGV);
+                PROBLEM::result = JUDGE_CONF::RE;
                 exit(JUDGE_CONF::EXIT_OK);
             }
         }
@@ -395,7 +401,7 @@ void compiler_source_code() {
             } else if (JUDGE_CONF::GCC_COMPILE_ERROR == WEXITSTATUS(status)){
                 //printf("compile error\n");
                 FM_LOG_TRACE("compile error");
-                output_result(JUDGE_CONF::CE);
+                PROBLEM::result = JUDGE_CONF::CE;
                 exit(JUDGE_CONF::EXIT_OK);
             } else {
                 //printf("compiler unkown exit status %d\n", WEXITSTATUS(status));
@@ -407,7 +413,8 @@ void compiler_source_code() {
                 if (SIGALRM == WTERMSIG(status)) {
                     //printf("compiler time out\n");
                     FM_LOG_WARNING("Compile time out");
-                    output_result(JUDGE_CONF::CE, 0, 0, "Compile Out of Time Limit\n");
+                    PROBLEM::result = JUDGE_CONF::CE;
+                    PROBLEM::extra_message = "Compile Out of Time Limit";
                     exit(JUDGE_CONF::EXIT_OK);
                 } else {
                     //printf("unkown signal\n");
@@ -528,7 +535,7 @@ void judge() {
             }
 
             //MLE
-            PROBLEM::memory_usage = std::max(PROBLEM::memory_usage,
+            PROBLEM::memory_usage = std::max((long int)PROBLEM::memory_usage,
                     rused.ru_minflt * (getpagesize() / JUDGE_CONF::KILO));
 
             if (PROBLEM::memory_usage > PROBLEM::memory_limit) {
@@ -738,9 +745,24 @@ void run_spj() {
     }
 }
 
+static
+void get_spj_result() {
+    FILE *spj_result = fopen(PROBLEM::spj_output_file.c_str(), "r");
+    char tmp[10];
+    fgets(tmp, sizeof(tmp), spj_result);
+    if (!strcmp(tmp, "AC")) {
+        PROBLEM::result = JUDGE_CONF::AC;
+    } else {
+        PROBLEM::result = JUDGE_CONF::WA;
+    }
+}
+
 int main(int argc, char *argv[]) {
 
     log_open("./core_log.txt");
+
+    atexit(output_result);
+
     if (geteuid() != 0) {
         //printf("must run as root\n");
         FM_LOG_FATAL("You must run this program as root.");
@@ -757,7 +779,6 @@ int main(int argc, char *argv[]) {
         exit(JUDGE_CONF::EXIT_VERY_FIRST);
     }
     signal(SIGALRM, timeout);
-    FM_LOG_TRACE("WTF?");
 
     compiler_source_code();
 
@@ -765,9 +786,13 @@ int main(int argc, char *argv[]) {
 
     if (PROBLEM::spj) {
         run_spj();
+        get_spj_result();
+    } else {
+        if (PROBLEM::result == JUDGE_CONF::SE)
+            PROBLEM::result = compare_output(PROBLEM::output_file, PROBLEM::exec_output);
     }
 
-    output_result(PROBLEM::result);
+    //output_result();
 
     return 0;
 }

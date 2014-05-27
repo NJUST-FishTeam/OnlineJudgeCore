@@ -31,6 +31,7 @@ const int RE      = 5;  //运行时错误，包括数组越界、非法调用等
 const int WA      = 6;
 const int AC      = 7;
 const int PE      = 8;
+const int SE      = 9;  //SytemError
 
 //一些常量
 const int KILO = 1024;
@@ -76,8 +77,8 @@ int spj_lang     = 0;
 int time_limit   = 1000;   //MS
 int memory_limit = 65535;  //KB
 int output_limit = 1024000; //KB
-int result       = 0;
-long memory_usage = 0;
+int result       = JUDGE_CONF::SE;
+int memory_usage = 0;
 int time_usage    = 0;
 std::string extra_message;
 std::string status;
