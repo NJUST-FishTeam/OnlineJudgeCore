@@ -19,12 +19,18 @@
 
 extern int errno;
 
+/*
+ * 判断某字符串是否含有某后缀
+ */
 static
 bool has_suffix(const std::string &str, const std::string &suffix) {
     return str.size() >= suffix.size() &&
            str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
+/*
+ * 输出判题结果到结果文件
+ */
 static
 void output_result() {
     //printf("%d %d %d\n", result, time_usage, memory_usage);
@@ -50,6 +56,9 @@ void output_result() {
             PROBLEM::memory_usage, PROBLEM::extra_message.c_str());
 }
 
+/*
+ * 解析参数
+ */
 static
 void parse_arguments(int argc, char* argv[]) {
     int opt;
@@ -141,6 +150,9 @@ int malarm(int which, int milliseconds) {
     return setitimer(which, &t, NULL);
 }
 
+/*
+ * 输入输出重定向
+ */
 static
 void io_redirect() {
     FM_LOG_TRACE("Start to redirect the IO.");
@@ -148,7 +160,7 @@ void io_redirect() {
     stdout = freopen(PROBLEM::exec_output.c_str(), "w", stdout);
     //stderr = freopen("/dev/null", "w", stderr);
 
-    if (stdin == NULL || stdout == NULL || stderr == NULL) {
+    if (stdin == NULL || stdout == NULL) {
         //printf("freopen error\n");
         FM_LOG_WARNING("It occur a error when freopen: stdin(%p) stdout(%p)", stdin, stdout);
         exit(JUDGE_CONF::EXIT_PRE_JUDGE);
@@ -156,6 +168,11 @@ void io_redirect() {
     FM_LOG_TRACE("redirect io is OK.");
 }
 
+/*
+ * 安全性控制
+ * chroot限制程序只能在某目录下操作，无法影响到外界
+ * setuid使其只拥有nobody的最低系统权限
+ */
 static
 void security_control() {
     struct passwd *nobody = getpwnam("nobody");
@@ -196,6 +213,10 @@ void security_control() {
     }
 }
 
+/*
+ * 对SpecialJudge程序的安全性控制
+ * 毕竟不是自己写的代码，得防着点
+ */
 static
 void security_control_spj() {
     struct passwd *nobody = getpwnam("nobody");
@@ -233,8 +254,12 @@ void security_control_spj() {
     }
 }
 
+/*
+ * 程序运行的限制
+ * CPU时间、堆栈、输出文件大小等
+ */
 static
-int set_limit() {
+void set_limit() {
     rlimit lim;
 
     lim.rlim_max = (PROBLEM::time_limit - PROBLEM::time_usage + 999) / 1000 + 1;//硬限制
@@ -246,6 +271,8 @@ int set_limit() {
     }
 
     //内存不能在此做限制
+    //原因忘了，反正是linux的内存分配机制的问题
+    //所以得在运行时不断累计内存使用量来限制
 
 
     //堆栈空间限制
@@ -278,7 +305,9 @@ int set_limit() {
     }
 }
 
-
+/*
+ * 这个函数不是我写的
+ */
 #include "rf_table.h"
 //系统调用在进和出的时候都会暂停, 把控制权交给judge
 static bool in_syscall = true;
@@ -341,6 +370,9 @@ bool is_valid_syscall(int lang, int syscall_id, pid_t child, user_regs_struct re
     return true;
 }
 
+/*
+ * 编译源代码
+ */
 static
 void compiler_source_code() {
     pid_t compiler = fork();
@@ -350,7 +382,7 @@ void compiler_source_code() {
         FM_LOG_WARNING("error fork compiler");
         exit(JUDGE_CONF::EXIT_COMPILE);
     } else if (compiler == 0) {
-        //log
+        //子进程，编译程序
         log_add_info("compiler");
         stdout = freopen(PROBLEM::stdout_file_compiler.c_str(), "w", stdout);
         stderr = freopen(PROBLEM::stderr_file_compiler.c_str(), "w", stderr);
@@ -360,7 +392,7 @@ void compiler_source_code() {
             exit(JUDGE_CONF::EXIT_COMPILE);
         }
 
-        malarm(ITIMER_REAL, JUDGE_CONF::COMPILE_TIME_LIMIT);
+        malarm(ITIMER_REAL, JUDGE_CONF::COMPILE_TIME_LIMIT);//设置编译时间限制
         switch (PROBLEM::lang) {
             case JUDGE_CONF::LANG_C:
                 //printf("compiler gcc\n");
@@ -385,7 +417,8 @@ void compiler_source_code() {
         FM_LOG_WARNING("exec compiler error");
         exit(JUDGE_CONF::EXIT_COMPILE);
     } else {
-        pid_t w = waitpid(compiler, &status, WUNTRACED);
+        //父进程
+        pid_t w = waitpid(compiler, &status, WUNTRACED); //阻塞等待子进程结束
         if (w == -1) {
             //printf("waitpid error\n");
             FM_LOG_WARNING("waitpid error");
@@ -395,13 +428,16 @@ void compiler_source_code() {
         //printf("compiler finished\n");
         FM_LOG_TRACE("compiler finished");
         if (WIFEXITED(status)) {
+            //编译程序自行退出
             if (EXIT_SUCCESS == WEXITSTATUS(status)) {
                 //printf("compile succeeded.\n");
                 FM_LOG_TRACE("compile succeeded.");
             } else if (JUDGE_CONF::GCC_COMPILE_ERROR == WEXITSTATUS(status)){
+                //编译错误
                 //printf("compile error\n");
                 FM_LOG_TRACE("compile error");
                 PROBLEM::result = JUDGE_CONF::CE;
+                get_compile_error_message();
                 exit(JUDGE_CONF::EXIT_OK);
             } else {
                 //printf("compiler unkown exit status %d\n", WEXITSTATUS(status));
@@ -409,6 +445,7 @@ void compiler_source_code() {
                 exit(JUDGE_CONF::EXIT_COMPILE);
             }
         } else {
+            //编译程序被终止
             if (WIFSIGNALED(status)){
                 if (SIGALRM == WTERMSIG(status)) {
                     //printf("compiler time out\n");
@@ -432,6 +469,9 @@ void compiler_source_code() {
     }
 }
 
+/*
+ * 执行用户提交的程序
+ */
 static
 void judge() {
     struct rusage rused;
@@ -440,7 +480,7 @@ void judge() {
         printf("fork for child failed\n");
         exit(JUDGE_CONF::EXIT_PRE_JUDGE);
     } else if (executive == 0) {
-        //log
+        //子进程，用户程序
         FM_LOG_TRACE("Start Judging.");
         io_redirect();
 
@@ -465,21 +505,24 @@ void judge() {
             execlp("java", "java", "Main", NULL);
         }
 
+        //走到这了说明出错了
         exit(JUDGE_CONF::EXIT_PRE_JUDGE_EXECLP);
     } else {
-        int status = 0;
-        int syscall_id = 0;
-        struct user_regs_struct regs;
+        //父进程
+        int status = 0;  //子进程状态
+        int syscall_id = 0; //系统调用号
+        struct user_regs_struct regs; //寄存器
 
-        init_RF_table(PROBLEM::lang);
+        init_RF_table(PROBLEM::lang); //初始化系统调用表
 
-        while (true) {
+        while (true) {//循环监控子进程
             if (wait4(executive, &status, 0, &rused) < 0) {
                 //printf("wait4 failed\n");
                 FM_LOG_WARNING("wait4 failed.");
                 exit(JUDGE_CONF::EXIT_JUDGE);
             }
 
+            //自行退出
             if (WIFEXITED(status)) {
                 if (PROBLEM::lang != JUDGE_CONF::LANG_JAVA ||
                     WEXITSTATUS(status) == EXIT_SUCCESS) {
@@ -495,8 +538,9 @@ void judge() {
                 break;
             }
 
+            //被信号终止掉了
             if (WIFSIGNALED(status) ||
-                (WIFSTOPPED(status) && WSTOPSIG(status) != SIGTRAP)) {
+                (WIFSTOPPED(status) && WSTOPSIG(status) != SIGTRAP)) { //要过滤掉SIGTRAP信号
                 int signo = 0;
                 if (WIFSIGNALED(status)) {
                     signo = WTERMSIG(status);
@@ -546,7 +590,7 @@ void judge() {
                 break;
             }
 
-            //GET REGS
+            //获得子进程的寄存器，目的是为了获知其系统调用
             if (ptrace(PTRACE_GETREGS, executive, NULL, &regs) < 0) {
                 FM_LOG_WARNING("ptrace PTRACE_GETREGS failed");
                 exit(JUDGE_CONF::EXIT_JUDGE);
@@ -557,8 +601,7 @@ void judge() {
 #else
             syscall_id = regs.orig_rax;
 #endif
-            //printf("The child made a system call %llu\n", regs.orig_rax);
-
+            //检查系统调用是否合法
             if (syscall_id > 0 &&
                 !is_valid_syscall(PROBLEM::lang, syscall_id, executive, regs)) {
                 FM_LOG_WARNING("restricted fuction %d\n", syscall_id);
@@ -759,10 +802,11 @@ void get_spj_result() {
 
 int main(int argc, char *argv[]) {
 
-    log_open("./core_log.txt");
+    log_open("./core_log.txt"); //或许写成参数更好，懒得写了
 
-    atexit(output_result);
+    atexit(output_result);  //退出程序时的回调函数，用于输出判题结果
 
+    //为了构建沙盒，必须要有root权限
     if (geteuid() != 0) {
         //printf("must run as root\n");
         FM_LOG_FATAL("You must run this program as root.");
@@ -791,8 +835,6 @@ int main(int argc, char *argv[]) {
         if (PROBLEM::result == JUDGE_CONF::SE)
             PROBLEM::result = compare_output(PROBLEM::output_file, PROBLEM::exec_output);
     }
-
-    //output_result();
 
     return 0;
 }
