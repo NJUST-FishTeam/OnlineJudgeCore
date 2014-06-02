@@ -567,9 +567,11 @@ void judge() {
                     case SIGFPE:
                     case SIGBUS:
                     case SIGABRT:
+                        //FM_LOG_TRACE("RE了");
                         PROBLEM::result = JUDGE_CONF::RE;
                         break;
                     default:
+                        //FM_LOG_TRACE("不知道哪儿跪了");
                         PROBLEM::result = JUDGE_CONF::RE;
                         break;
                 }
@@ -659,8 +661,14 @@ int compare_output(std::string file_std, std::string file_exec) {
         Na++, Nb++;
 
         //统一\r和\n之间的区别
-        if (a == '\r') a = '\n';
-        if (b == '\r') b = '\n';
+        if (a == '\r') {
+            a = fgetc(fp_std);
+            Na++;
+        }
+        if (b == '\r') {
+            b = fgetc(fp_std);
+            Nb++;
+        }
 #define is_space_char(a) ((a == ' ') || (a == '\t') || (a == '\n'))
 
         if (feof(fp_std) && feof(fp_exe)){
@@ -689,11 +697,12 @@ int compare_output(std::string file_std, std::string file_exec) {
                 fp_tmp = fp_std;
             }
             int c;
-            while (c = fgetc(fp_tmp), c != EOF) {
+            while ((c = fgetc(fp_tmp)) != EOF) {
                 if (c == '\r') c = '\n';
                 if (!is_space_char(c)) {
                     //printf("WA\n");
                     FM_LOG_TRACE("Well, Wrong Answer.");
+                    status = WA;
                     break;
                 }
             }
@@ -705,17 +714,21 @@ int compare_output(std::string file_std, std::string file_exec) {
             status = PE;
             //过滤空白字符
             if (is_space_char(a) && is_space_char(b)) {
+                FM_LOG_DEBUG("1");
                 continue;
             }
             if (is_space_char(a)) {
                 //a是空白字符，过滤，退回b以便下一轮循环
+                FM_LOG_DEBUG("2");
                 ungetc(b, fp_exe);
                 Nb--;
             } else if (is_space_char(b)) {
+                FM_LOG_DEBUG("3");
                 ungetc(a, fp_std);
                 Na--;
             } else {
                 //printf("WA\n");
+                FM_LOG_DEBUG("4");
                 FM_LOG_TRACE("Well, Wrong Answer.");
                 status = WA;
                 break;
@@ -729,7 +742,7 @@ int compare_output(std::string file_std, std::string file_exec) {
 
 static
 void run_spj() {
-    printf("start spj\n");
+    //printf("start spj\n");
     pid_t spj_pid = fork();
     int status = 0;
     if (spj_pid < 0) {
