@@ -557,10 +557,14 @@ void judge() {
                     case SIGVTALRM:
                     case SIGKILL:
                         FM_LOG_TRACE("Well, Time Limit Exeeded");
+                        PROBLEM::time_usage = 0;
+                        PROBLEM::memory_usage = 0;
                         PROBLEM::result = JUDGE_CONF::TLE;
                         break;
                     case SIGXFSZ:
                         FM_LOG_TRACE("File Limit Exceeded");
+                        PROBLEM::time_usage = 0;
+                        PROBLEM::memory_usage = 0;
                         PROBLEM::result = JUDGE_CONF::OLE;
                         break;
                     case SIGSEGV:
@@ -568,10 +572,14 @@ void judge() {
                     case SIGBUS:
                     case SIGABRT:
                         //FM_LOG_TRACE("RE了");
+                        PROBLEM::time_usage = 0;
+                        PROBLEM::memory_usage = 0;
                         PROBLEM::result = JUDGE_CONF::RE;
                         break;
                     default:
                         //FM_LOG_TRACE("不知道哪儿跪了");
+                        PROBLEM::time_usage = 0;
+                        PROBLEM::memory_usage = 0;
                         PROBLEM::result = JUDGE_CONF::RE;
                         break;
                 }
@@ -586,6 +594,8 @@ void judge() {
 
             if (PROBLEM::memory_usage > PROBLEM::memory_limit) {
                 //printf("MLE\n");
+                PROBLEM::time_usage = 0;
+                PROBLEM::memory_usage = 0;
                 PROBLEM::result = JUDGE_CONF::MLE;
                 FM_LOG_TRACE("Well, Memory Limit Exceeded.");
                 ptrace(PTRACE_KILL, executive, NULL, NULL);
@@ -627,10 +637,12 @@ void judge() {
         }
     }
 
-    PROBLEM::time_usage += (rused.ru_utime.tv_sec * 1000 +
-                            rused.ru_utime.tv_usec / 1000);
-    PROBLEM::time_usage += (rused.ru_stime.tv_sec * 1000 +
-                            rused.ru_stime.tv_usec / 1000);
+    if (PROBLEM::result == JUDGE_CONF::SE){
+        PROBLEM::time_usage += (rused.ru_utime.tv_sec * 1000 +
+                                rused.ru_utime.tv_usec / 1000);
+        PROBLEM::time_usage += (rused.ru_stime.tv_sec * 1000 +
+                                rused.ru_stime.tv_usec / 1000);
+    }
 
 }
 
