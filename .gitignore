@@ -6,3 +6,4 @@
 *.txt
 Core
 test/
+run_dir/
