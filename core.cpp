@@ -203,14 +203,14 @@ void security_control() {
             FM_LOG_WARNING("chroot(%s) failed. %d: %s", cwd, errno, strerror(errno));
             exit(JUDGE_CONF::EXIT_SET_SECURITY);
         }
+        //setuid
+        if (EXIT_SUCCESS != setuid(nobody->pw_uid)) {
+            //printf("set uid failed\n %d: %s\n", errno, strerror(errno));
+            FM_LOG_WARNING("setuid(%d) failed. %d: %s", nobody->pw_uid, errno, strerror(errno));
+            exit(JUDGE_CONF::EXIT_SET_SECURITY);
+        }
     }
 
-    //setuid
-    if (EXIT_SUCCESS != setuid(nobody->pw_uid)) {
-        //printf("set uid failed\n %d: %s\n", errno, strerror(errno));
-        FM_LOG_WARNING("setuid(%d) failed. %d: %s", nobody->pw_uid, errno, strerror(errno));
-        exit(JUDGE_CONF::EXIT_SET_SECURITY);
-    }
 }
 
 /*
