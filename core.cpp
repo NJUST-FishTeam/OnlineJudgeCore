@@ -203,14 +203,14 @@ void security_control() {
             FM_LOG_WARNING("chroot(%s) failed. %d: %s", cwd, errno, strerror(errno));
             exit(JUDGE_CONF::EXIT_SET_SECURITY);
         }
+        //setuid
+        if (EXIT_SUCCESS != setuid(nobody->pw_uid)) {
+            //printf("set uid failed\n %d: %s\n", errno, strerror(errno));
+            FM_LOG_WARNING("setuid(%d) failed. %d: %s", nobody->pw_uid, errno, strerror(errno));
+            exit(JUDGE_CONF::EXIT_SET_SECURITY);
+        }
     }
 
-    //setuid
-    if (EXIT_SUCCESS != setuid(nobody->pw_uid)) {
-        //printf("set uid failed\n %d: %s\n", errno, strerror(errno));
-        FM_LOG_WARNING("setuid(%d) failed. %d: %s", nobody->pw_uid, errno, strerror(errno));
-        exit(JUDGE_CONF::EXIT_SET_SECURITY);
-    }
 }
 
 /*
@@ -557,19 +557,29 @@ void judge() {
                     case SIGVTALRM:
                     case SIGKILL:
                         FM_LOG_TRACE("Well, Time Limit Exeeded");
+                        PROBLEM::time_usage = 0;
+                        PROBLEM::memory_usage = 0;
                         PROBLEM::result = JUDGE_CONF::TLE;
                         break;
                     case SIGXFSZ:
                         FM_LOG_TRACE("File Limit Exceeded");
+                        PROBLEM::time_usage = 0;
+                        PROBLEM::memory_usage = 0;
                         PROBLEM::result = JUDGE_CONF::OLE;
                         break;
                     case SIGSEGV:
                     case SIGFPE:
                     case SIGBUS:
                     case SIGABRT:
+                        //FM_LOG_TRACE("RE了");
+                        PROBLEM::time_usage = 0;
+                        PROBLEM::memory_usage = 0;
                         PROBLEM::result = JUDGE_CONF::RE;
                         break;
                     default:
+                        //FM_LOG_TRACE("不知道哪儿跪了");
+                        PROBLEM::time_usage = 0;
+                        PROBLEM::memory_usage = 0;
                         PROBLEM::result = JUDGE_CONF::RE;
                         break;
                 }
@@ -584,6 +594,8 @@ void judge() {
 
             if (PROBLEM::memory_usage > PROBLEM::memory_limit) {
                 //printf("MLE\n");
+                PROBLEM::time_usage = 0;
+                PROBLEM::memory_usage = 0;
                 PROBLEM::result = JUDGE_CONF::MLE;
                 FM_LOG_TRACE("Well, Memory Limit Exceeded.");
                 ptrace(PTRACE_KILL, executive, NULL, NULL);
@@ -625,10 +637,12 @@ void judge() {
         }
     }
 
-    PROBLEM::time_usage += (rused.ru_utime.tv_sec * 1000 +
-                            rused.ru_utime.tv_usec / 1000);
-    PROBLEM::time_usage += (rused.ru_stime.tv_sec * 1000 +
-                            rused.ru_stime.tv_usec / 1000);
+    if (PROBLEM::result == JUDGE_CONF::SE){
+        PROBLEM::time_usage += (rused.ru_utime.tv_sec * 1000 +
+                                rused.ru_utime.tv_usec / 1000);
+        PROBLEM::time_usage += (rused.ru_stime.tv_sec * 1000 +
+                                rused.ru_stime.tv_usec / 1000);
+    }
 
 }
 
@@ -659,8 +673,14 @@ int compare_output(std::string file_std, std::string file_exec) {
         Na++, Nb++;
 
         //统一\r和\n之间的区别
-        if (a == '\r') a = '\n';
-        if (b == '\r') b = '\n';
+        if (a == '\r') {
+            a = fgetc(fp_std);
+            Na++;
+        }
+        if (b == '\r') {
+            b = fgetc(fp_std);
+            Nb++;
+        }
 #define is_space_char(a) ((a == ' ') || (a == '\t') || (a == '\n'))
 
         if (feof(fp_std) && feof(fp_exe)){
@@ -689,11 +709,12 @@ int compare_output(std::string file_std, std::string file_exec) {
                 fp_tmp = fp_std;
             }
             int c;
-            while (c = fgetc(fp_tmp), c != EOF) {
+            while ((c = fgetc(fp_tmp)) != EOF) {
                 if (c == '\r') c = '\n';
                 if (!is_space_char(c)) {
                     //printf("WA\n");
                     FM_LOG_TRACE("Well, Wrong Answer.");
+                    status = WA;
                     break;
                 }
             }
@@ -705,17 +726,21 @@ int compare_output(std::string file_std, std::string file_exec) {
             status = PE;
             //过滤空白字符
             if (is_space_char(a) && is_space_char(b)) {
+                FM_LOG_DEBUG("1");
                 continue;
             }
             if (is_space_char(a)) {
                 //a是空白字符，过滤，退回b以便下一轮循环
+                FM_LOG_DEBUG("2");
                 ungetc(b, fp_exe);
                 Nb--;
             } else if (is_space_char(b)) {
+                FM_LOG_DEBUG("3");
                 ungetc(a, fp_std);
                 Na--;
             } else {
                 //printf("WA\n");
+                FM_LOG_DEBUG("4");
                 FM_LOG_TRACE("Well, Wrong Answer.");
                 status = WA;
                 break;
@@ -729,7 +754,7 @@ int compare_output(std::string file_std, std::string file_exec) {
 
 static
 void run_spj() {
-    printf("start spj\n");
+    //printf("start spj\n");
     pid_t spj_pid = fork();
     int status = 0;
     if (spj_pid < 0) {
