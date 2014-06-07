@@ -239,19 +239,19 @@ void security_control_spj() {
         exit(JUDGE_CONF::EXIT_SET_SECURITY);
     }
 
-    if (PROBLEM::spj_lang != JUDGE_CONF::LANG_JAVA) {
-        if (EXIT_SUCCESS != chroot(cwd)) {
-            //printf("chroot failed\n");
-            FM_LOG_WARNING("chroot(%s) failed. %d: %s", cwd, errno, strerror(errno));
-            exit(JUDGE_CONF::EXIT_SET_SECURITY);
-        }
-    }
+    //if (PROBLEM::spj_lang != JUDGE_CONF::LANG_JAVA) {
+    //    if (EXIT_SUCCESS != chroot(cwd)) {
+    //        //printf("chroot failed\n");
+    //        FM_LOG_WARNING("chroot(%s) failed. %d: %s", cwd, errno, strerror(errno));
+    //        exit(JUDGE_CONF::EXIT_SET_SECURITY);
+    //    }
+    //}
 
-    if (EXIT_SUCCESS != setuid(nobody->pw_uid)) {
-        //printf("set uid failed\n");
-        FM_LOG_WARNING("setuid(%d) failed. %d: %s", nobody->pw_uid, errno, strerror(errno));
-        exit(JUDGE_CONF::EXIT_SET_SECURITY);
-    }
+    //if (EXIT_SUCCESS != setuid(nobody->pw_uid)) {
+    //    //printf("set uid failed\n");
+    //    FM_LOG_WARNING("setuid(%d) failed. %d: %s", nobody->pw_uid, errno, strerror(errno));
+    //    exit(JUDGE_CONF::EXIT_SET_SECURITY);
+    //}
 }
 
 /*
@@ -818,7 +818,7 @@ void get_spj_result() {
     FILE *spj_result = fopen(PROBLEM::spj_output_file.c_str(), "r");
     char tmp[10];
     fgets(tmp, sizeof(tmp), spj_result);
-    if (!strcmp(tmp, "AC")) {
+    if (!strcmp(tmp, "AC\n")) {
         PROBLEM::result = JUDGE_CONF::AC;
     } else {
         PROBLEM::result = JUDGE_CONF::WA;
