@@ -33,7 +33,6 @@ bool has_suffix(const std::string &str, const std::string &suffix) {
  */
 static
 void output_result() {
-    //printf("%d %d %d\n", result, time_usage, memory_usage);
     FILE* result_file = fopen(PROBLEM::result_file.c_str(), "w");
     switch (PROBLEM::result){
         case 1:PROBLEM::status = "Compile Error";break;
@@ -73,7 +72,6 @@ void parse_arguments(int argc, char* argv[]) {
             case 'S': PROBLEM::spj_lang     = atoi(optarg);   break;
             case 'd': PROBLEM::run_dir      = optarg;         break;
             default:
-                //printf("unkown option\n");
                 FM_LOG_WARNING("Unknown option provided: -%c %s", opt, optarg);
                 exit(JUDGE_CONF::EXIT_BAD_PARAM);
         }
@@ -86,7 +84,6 @@ void parse_arguments(int argc, char* argv[]) {
     } else if (has_suffix(PROBLEM::code_path, ".java")) {
         PROBLEM::lang = JUDGE_CONF::LANG_JAVA;
     } else {
-        //printf("unkwon language\n");
         FM_LOG_WARNING("It seems that you give me a language which I do not known now: %d", PROBLEM::lang);
         exit(JUDGE_CONF::EXIT_BAD_PARAM);
     }
@@ -102,7 +99,7 @@ void parse_arguments(int argc, char* argv[]) {
     if (PROBLEM::lang == JUDGE_CONF::LANG_JAVA) {
         PROBLEM::exec_file = PROBLEM::run_dir + "/Main";
         PROBLEM::time_limit *= JUDGE_CONF::JAVA_TIME_FACTOR;
-        PROBLEM::memory_limit *= JUDGE_CONF::JAVA_MEM_FACTOR;
+        PROBLEM::memory_limit *= JUDGE_CONF::JAVA_MEM_FACTOR; //Java放宽内存和时间限制
     }
 
     if (PROBLEM::spj) {
@@ -111,7 +108,6 @@ void parse_arguments(int argc, char* argv[]) {
             case 2: PROBLEM::spj_exec_file = PROBLEM::run_dir + "/SpecialJudge";break;
             case 3: PROBLEM::spj_exec_file = PROBLEM::run_dir + "/SpecialJudge";break;
             default:
-                //printf("Unknown special judge language\n");
                 FM_LOG_WARNING("OMG, I really do not kwon the special judge problem language.");
                 exit(JUDGE_CONF::EXIT_BAD_PARAM);
         }
@@ -134,6 +130,7 @@ void get_compile_error_message() {
 
 static
 void timeout(int signo) {
+    //超时的回调函数
     if (signo == SIGALRM) {
         exit(JUDGE_CONF::EXIT_TIMEOUT);
     }
@@ -161,7 +158,6 @@ void io_redirect() {
     //stderr = freopen("/dev/null", "w", stderr);
 
     if (stdin == NULL || stdout == NULL) {
-        //printf("freopen error\n");
         FM_LOG_WARNING("It occur a error when freopen: stdin(%p) stdout(%p)", stdin, stdout);
         exit(JUDGE_CONF::EXIT_PRE_JUDGE);
     }
@@ -177,35 +173,31 @@ static
 void security_control() {
     struct passwd *nobody = getpwnam("nobody");
     if (nobody == NULL){
-        //printf("no user name nobody\n");
         FM_LOG_WARNING("Well, where is nobody? I cannot live without him. %d: %s", errno, strerror(errno));
         exit(JUDGE_CONF::EXIT_SET_SECURITY);
     }
 
     //chdir
     if (EXIT_SUCCESS != chdir(PROBLEM::run_dir.c_str())) {
-        //printf("chdir failed\n");
         FM_LOG_WARNING("chdir(%s) failed, %d: %s", PROBLEM::run_dir.c_str(), errno, strerror(errno));
         exit(JUDGE_CONF::EXIT_SET_SECURITY);
     }
 
     char cwd[1024], *tmp = getcwd(cwd, 1024);
     if (tmp == NULL) {
-        //printf("getcwd failed\n");
         FM_LOG_WARNING("Oh, where i am now? I cannot getcwd. %d: %s", errno, strerror(errno));
         exit(JUDGE_CONF::EXIT_SET_SECURITY);
     }
 
     //chroot
+    //Java比较特殊，一旦chroot或setuid，那么JVM就跑不起来了
     if (PROBLEM::lang != JUDGE_CONF::LANG_JAVA) {
         if (EXIT_SUCCESS != chroot(cwd)) {
-            //printf("chroot failed\n");
             FM_LOG_WARNING("chroot(%s) failed. %d: %s", cwd, errno, strerror(errno));
             exit(JUDGE_CONF::EXIT_SET_SECURITY);
         }
         //setuid
         if (EXIT_SUCCESS != setuid(nobody->pw_uid)) {
-            //printf("set uid failed\n %d: %s\n", errno, strerror(errno));
             FM_LOG_WARNING("setuid(%d) failed. %d: %s", nobody->pw_uid, errno, strerror(errno));
             exit(JUDGE_CONF::EXIT_SET_SECURITY);
         }
@@ -221,34 +213,29 @@ static
 void security_control_spj() {
     struct passwd *nobody = getpwnam("nobody");
     if (nobody == NULL) {
-        //printf("no user name nobody\n");
         FM_LOG_WARNING("Well, where is nobody? I cannot live without him. %d: %s", errno, strerror(errno));
         exit(JUDGE_CONF::EXIT_SET_SECURITY);
     }
 
     if (EXIT_SUCCESS != chdir(PROBLEM::run_dir.c_str())) {
-        //printf("chdir failed\n");
         FM_LOG_WARNING("chdir(%s) failed, %d: %s", PROBLEM::run_dir.c_str(), errno, strerror(errno));
         exit(JUDGE_CONF::EXIT_SET_SECURITY);
     }
 
     char cwd[1024], *tmp = getcwd(cwd, 1024);
     if (tmp == NULL) {
-        //printf("getcwd failed\n");
         FM_LOG_WARNING("Oh, where i am now? I cannot getcwd. %d: %s", errno, strerror(errno));
         exit(JUDGE_CONF::EXIT_SET_SECURITY);
     }
 
     //if (PROBLEM::spj_lang != JUDGE_CONF::LANG_JAVA) {
     //    if (EXIT_SUCCESS != chroot(cwd)) {
-    //        //printf("chroot failed\n");
     //        FM_LOG_WARNING("chroot(%s) failed. %d: %s", cwd, errno, strerror(errno));
     //        exit(JUDGE_CONF::EXIT_SET_SECURITY);
     //    }
     //}
 
     //if (EXIT_SUCCESS != setuid(nobody->pw_uid)) {
-    //    //printf("set uid failed\n");
     //    FM_LOG_WARNING("setuid(%d) failed. %d: %s", nobody->pw_uid, errno, strerror(errno));
     //    exit(JUDGE_CONF::EXIT_SET_SECURITY);
     //}
@@ -265,7 +252,6 @@ void set_limit() {
     lim.rlim_max = (PROBLEM::time_limit - PROBLEM::time_usage + 999) / 1000 + 1;//硬限制
     lim.rlim_cur = lim.rlim_max; //软限制
     if (setrlimit(RLIMIT_CPU, &lim) < 0) {
-        //printf("setrlimit for RLIMIT_CPU error\n");
         FM_LOG_WARNING("error setrlimit for RLIMIT_CPU");
         exit(JUDGE_CONF::EXIT_SET_LIMIT);
     }
@@ -277,18 +263,15 @@ void set_limit() {
 
     //堆栈空间限制
     getrlimit(RLIMIT_STACK, &lim);
-    //printf
 
     int rlim = JUDGE_CONF::STACK_SIZE_LIMIT * JUDGE_CONF::KILO;
     if (lim.rlim_max <= rlim) {
-        //printf("cannot set stack size\n");
         FM_LOG_WARNING("cannot set stack size to higher(%d <= %d)", lim.rlim_max, rlim);
     } else {
         lim.rlim_max = rlim;
         lim.rlim_cur = rlim;
 
         if (setrlimit(RLIMIT_STACK, &lim) < 0) {
-            //printf("setrlimt RLIMIT_STACK failed\n");
             FM_LOG_WARNING("error setrlimit for RLIMIT_STACK");
             exit(JUDGE_CONF::EXIT_SET_LIMIT);
         }
@@ -378,7 +361,6 @@ void compiler_source_code() {
     pid_t compiler = fork();
     int status = 0;
     if (compiler < 0) {
-        //printf("fork compiler error\n");
         FM_LOG_WARNING("error fork compiler");
         exit(JUDGE_CONF::EXIT_COMPILE);
     } else if (compiler == 0) {
@@ -387,7 +369,6 @@ void compiler_source_code() {
         stdout = freopen(PROBLEM::stdout_file_compiler.c_str(), "w", stdout);
         stderr = freopen(PROBLEM::stderr_file_compiler.c_str(), "w", stderr);
         if (stdout == NULL || stderr == NULL) {
-            //printf("error freopen stdout, stderr\n");
             FM_LOG_WARNING("error to freopen in compiler: stdout(%p) stderr(%p)", stdout, stderr);
             exit(JUDGE_CONF::EXIT_COMPILE);
         }
@@ -395,52 +376,44 @@ void compiler_source_code() {
         malarm(ITIMER_REAL, JUDGE_CONF::COMPILE_TIME_LIMIT);//设置编译时间限制
         switch (PROBLEM::lang) {
             case JUDGE_CONF::LANG_C:
-                //printf("compiler gcc\n");
                 FM_LOG_TRACE("Start: gcc -o %s %s -static -w -lm -std=c99 -O2 -DONLINE_JUDGE",
                         PROBLEM::exec_file.c_str(), PROBLEM::code_path.c_str());
                 execlp("gcc", "gcc", "-o", PROBLEM::exec_file.c_str(), PROBLEM::code_path.c_str(),
                         "-static", "-w", "-lm", "-std=c99", "-O2", "-DONLINE_JUDGE", NULL);
                 break;
             case JUDGE_CONF::LANG_CPP:
-                //printf("compiler g++\n");
                 FM_LOG_TRACE("Start: g++ -o %s %s -static -w -lm -O2 -DONLINE_JUDGE",
                         PROBLEM::exec_file.c_str(), PROBLEM::code_path.c_str());
                 execlp("g++", "g++", "-o", PROBLEM::exec_file.c_str(), PROBLEM::code_path.c_str(),
                         "-static", "-w", "-lm", "-O2", "-DONLINE_JUDGE", NULL);
                 break;
             case JUDGE_CONF::LANG_JAVA:
-                //printf("compiler java\n");
                 FM_LOG_TRACE("Start:javac %s -d %s", PROBLEM::code_path.c_str(), PROBLEM::run_dir.c_str());
                 execlp("javac", "javac", PROBLEM::code_path.c_str(), "-d", PROBLEM::run_dir.c_str(), NULL);
+            //在这里增加新的语言支持
         }
-        //printf("exec error");
         FM_LOG_WARNING("exec compiler error");
         exit(JUDGE_CONF::EXIT_COMPILE);
     } else {
         //父进程
         pid_t w = waitpid(compiler, &status, WUNTRACED); //阻塞等待子进程结束
         if (w == -1) {
-            //printf("waitpid error\n");
             FM_LOG_WARNING("waitpid error");
             exit(JUDGE_CONF::EXIT_COMPILE);
         }
 
-        //printf("compiler finished\n");
         FM_LOG_TRACE("compiler finished");
         if (WIFEXITED(status)) {
             //编译程序自行退出
             if (EXIT_SUCCESS == WEXITSTATUS(status)) {
-                //printf("compile succeeded.\n");
                 FM_LOG_TRACE("compile succeeded.");
             } else if (JUDGE_CONF::GCC_COMPILE_ERROR == WEXITSTATUS(status)){
                 //编译错误
-                //printf("compile error\n");
                 FM_LOG_TRACE("compile error");
                 PROBLEM::result = JUDGE_CONF::CE;
                 get_compile_error_message();
                 exit(JUDGE_CONF::EXIT_OK);
             } else {
-                //printf("compiler unkown exit status %d\n", WEXITSTATUS(status));
                 FM_LOG_WARNING("Unknown error occur when compiling the source code.Exit status %d", WEXITSTATUS(status));
                 exit(JUDGE_CONF::EXIT_COMPILE);
             }
@@ -448,20 +421,16 @@ void compiler_source_code() {
             //编译程序被终止
             if (WIFSIGNALED(status)){
                 if (SIGALRM == WTERMSIG(status)) {
-                    //printf("compiler time out\n");
                     FM_LOG_WARNING("Compile time out");
                     PROBLEM::result = JUDGE_CONF::CE;
                     PROBLEM::extra_message = "Compile Out of Time Limit";
                     exit(JUDGE_CONF::EXIT_OK);
                 } else {
-                    //printf("unkown signal\n");
                     FM_LOG_WARNING("Unknown signal when compile the source code.");
                 }
             } else if (WIFSTOPPED(status)){
-                //printf("stopped by signal\n");
                 FM_LOG_WARNING("The compile process stopped by signal");
             } else {
-                //printf("unknown stop reason");
                 FM_LOG_WARNING("I don't kwon why the compile process stopped");
             }
             exit(JUDGE_CONF::EXIT_COMPILE);
@@ -477,7 +446,6 @@ void judge() {
     struct rusage rused;
     pid_t executive = fork();
     if (executive < 0) {
-        printf("fork for child failed\n");
         exit(JUDGE_CONF::EXIT_PRE_JUDGE);
     } else if (executive == 0) {
         //子进程，用户程序
@@ -488,11 +456,9 @@ void judge() {
 
         int real_time_limit = PROBLEM::time_limit;
         if (EXIT_SUCCESS != malarm(ITIMER_REAL, real_time_limit)) {
-            //printf("malarm failed\n");
             exit(JUDGE_CONF::EXIT_PRE_JUDGE);
         }
 
-        //log
         set_limit();
 
         if (ptrace(PTRACE_TRACEME, 0, NULL, NULL) < 0) {
@@ -517,7 +483,6 @@ void judge() {
 
         while (true) {//循环监控子进程
             if (wait4(executive, &status, 0, &rused) < 0) {
-                //printf("wait4 failed\n");
                 FM_LOG_WARNING("wait4 failed.");
                 exit(JUDGE_CONF::EXIT_JUDGE);
             }
@@ -526,12 +491,10 @@ void judge() {
             if (WIFEXITED(status)) {
                 if (PROBLEM::lang != JUDGE_CONF::LANG_JAVA ||
                     WEXITSTATUS(status) == EXIT_SUCCESS) {
-                    //printf("normal quit\n");
                     FM_LOG_TRACE("OK, normal quit. All is good.");
 
                     //PROBLEM::result = JUDGE_CONF::PROCEED;
                 } else {
-                    //printf("abnormal quit\n");
                     FM_LOG_WARNING("oh, some error occured.Abnormal quit.");
                     PROBLEM::result = JUDGE_CONF::RE;
                 }
@@ -593,7 +556,6 @@ void judge() {
                     rused.ru_minflt * (getpagesize() / JUDGE_CONF::KILO));
 
             if (PROBLEM::memory_usage > PROBLEM::memory_limit) {
-                //printf("MLE\n");
                 PROBLEM::time_usage = 0;
                 PROBLEM::memory_usage = 0;
                 PROBLEM::result = JUDGE_CONF::MLE;
@@ -618,7 +580,6 @@ void judge() {
                 !is_valid_syscall(PROBLEM::lang, syscall_id, executive, regs)) {
                 FM_LOG_WARNING("restricted fuction %d\n", syscall_id);
                 if (syscall_id == SYS_rt_sigprocmask){
-                    //printf("glibc failed\n");
                     FM_LOG_WARNING("The glibc failed.");
                 } else {
                     //FM_LOG_WARNING("%d\n", SYS_write);
@@ -630,13 +591,15 @@ void judge() {
             }
 
             if (ptrace(PTRACE_SYSCALL, executive, NULL, NULL) < 0) {
-                //printf("ptrace PTRACE_SYSCALL failed\n");
                 FM_LOG_WARNING("ptrace PTRACE_SYSCALL failed.");
                 exit(JUDGE_CONF::EXIT_JUDGE);
             }
         }
     }
 
+    //这儿关于time_usage和memory_usage计算的有点混乱
+    //主要是为了减轻web的任务
+    //只要不是AC，就把time_usage和memory_usage归0
     if (PROBLEM::result == JUDGE_CONF::SE){
         PROBLEM::time_usage += (rused.ru_utime.tv_sec * 1000 +
                                 rused.ru_utime.tv_usec / 1000);
@@ -648,16 +611,17 @@ void judge() {
 
 static
 int compare_output(std::string file_std, std::string file_exec) {
+    //这里可以不用写的
+    //仔细研究一下diff及其参数即可
+    //实现各种功能
     FILE *fp_std = fopen(file_std.c_str(), "r");
     if (fp_std == NULL) {
-        //printf("open standard output failed.\n");
         FM_LOG_WARNING("Open standard output file failed.");
         exit(JUDGE_CONF::EXIT_COMPARE);
     }
 
     FILE *fp_exe = fopen(file_exec.c_str(), "r");
     if (fp_exe == NULL) {
-        //printf("open executive output failed\n");
         FM_LOG_WARNING("Open executive output file failed.");
         exit(JUDGE_CONF::EXIT_COMPARE);
     }
@@ -693,7 +657,6 @@ int compare_output(std::string file_std, std::string file_exec) {
             FILE *fp_tmp;
             if (feof(fp_std)) {
                 if (!is_space_char(b)) {
-                    //printf("WA\n");
                     FM_LOG_TRACE("Well, Wrong Answer.");
                     status = WA;
                     break;
@@ -701,7 +664,6 @@ int compare_output(std::string file_std, std::string file_exec) {
                 fp_tmp = fp_exe;
             } else {
                 if (!is_space_char(a)) {
-                    //printf("WA\n");
                     FM_LOG_TRACE("Well, Wrong Answer.");
                     status = WA;
                     break;
@@ -712,7 +674,6 @@ int compare_output(std::string file_std, std::string file_exec) {
             while ((c = fgetc(fp_tmp)) != EOF) {
                 if (c == '\r') c = '\n';
                 if (!is_space_char(c)) {
-                    //printf("WA\n");
                     FM_LOG_TRACE("Well, Wrong Answer.");
                     status = WA;
                     break;
@@ -739,7 +700,6 @@ int compare_output(std::string file_std, std::string file_exec) {
                 ungetc(a, fp_std);
                 Na--;
             } else {
-                //printf("WA\n");
                 FM_LOG_DEBUG("4");
                 FM_LOG_TRACE("Well, Wrong Answer.");
                 status = WA;
@@ -754,26 +714,21 @@ int compare_output(std::string file_std, std::string file_exec) {
 
 static
 void run_spj() {
-    //printf("start spj\n");
     pid_t spj_pid = fork();
     int status = 0;
     if (spj_pid < 0) {
-        //printf("fork for spj failed\n");
         FM_LOG_WARNING("fork for special judge failed.So sad.");
         exit(JUDGE_CONF::EXIT_COMPARE_SPJ);
     } else if (spj_pid == 0) {
-        //printf("spj\n");
         FM_LOG_TRACE("Woo, I will start special judge!");
         stdin = freopen(PROBLEM::exec_output.c_str(), "r", stdin);
         stdout = freopen(PROBLEM::spj_output_file.c_str(), "w", stdout);
         if (stdin == NULL || stdout == NULL) {
-            //printf("failed to open files in spj\n");
             FM_LOG_WARNING("redirect io in spj failed.");
             exit(JUDGE_CONF::EXIT_COMPARE_SPJ);
         }
         //SPJ时间限制
         if (EXIT_SUCCESS != malarm(ITIMER_REAL, JUDGE_CONF::SPJ_TIME_LIMIT)) {
-            //printf("spj set time limit failed\n");
             FM_LOG_WARNING("Set time limit for spj failed.");
             exit(JUDGE_CONF::EXIT_COMPARE_SPJ);
         }
@@ -789,25 +744,20 @@ void run_spj() {
         exit(JUDGE_CONF::EXIT_COMPARE_SPJ_FORK);
     } else {
         if (wait4(spj_pid, &status, 0, NULL) < 0) {
-            //printf("wait4 failed\n");
             FM_LOG_WARNING("wait4 failed.");
             exit(JUDGE_CONF::EXIT_COMPARE_SPJ);
         }
 
         if (WIFEXITED(status)) {
             if (WEXITSTATUS(status) == EXIT_SUCCESS) {
-                //printf("spj normal quit\n");
                 FM_LOG_TRACE("Well, SpecialJudge program normally quit.All is good.");
                 return ;
             } else {
-                //printf("spj abnormal termination %d\n", WEXITSTATUS(status));
                 FM_LOG_WARNING("I am sorry to tell you that the special judge program abnormally terminated. %d", WEXITSTATUS(status));
             }
         } else if (WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM) {
-            //printf("spj time out\n");
             FM_LOG_WARNING("Well, the special judge program consume too much time.");
         } else {
-            //printf("unkown termination\n");
             FM_LOG_WARNING("Actually, I do not kwon why the special judge program dead.");
         }
     }
@@ -833,7 +783,6 @@ int main(int argc, char *argv[]) {
 
     //为了构建沙盒，必须要有root权限
     if (geteuid() != 0) {
-        //printf("must run as root\n");
         FM_LOG_FATAL("You must run this program as root.");
         exit(JUDGE_CONF::EXIT_UNPRIVILEGED);
     }
@@ -843,7 +792,6 @@ int main(int argc, char *argv[]) {
     JUDGE_CONF::JUDGE_TIME_LIMIT += PROBLEM::time_limit;
 
     if (EXIT_SUCCESS != malarm(ITIMER_REAL, JUDGE_CONF::JUDGE_TIME_LIMIT)) {
-        //printf("set alarm for judge failed, %d: %s\n", errno, strerror(errno));
         FM_LOG_WARNING("Set the alarm for this judge program failed, %d: %s", errno, strerror(errno));
         exit(JUDGE_CONF::EXIT_VERY_FIRST);
     }
