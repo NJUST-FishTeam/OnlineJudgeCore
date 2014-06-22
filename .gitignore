@@ -3,5 +3,7 @@
 *.o
 *.out
 *.sh
+*.txt
 Core
 test/
+run_dir/

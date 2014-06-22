@@ -78,7 +78,7 @@ int log_open(const char* filename)
     int len = strlen(filename);
     log_filename = (char *)malloc(sizeof(char) * len + 1);
     strcpy(log_filename, filename);
-    log_fp = fopen(log_filename, "w");
+    log_fp = fopen(log_filename, "a");
     if (log_fp == NULL)
     {
         fprintf(stderr, "log_file: %s", log_filename);
@@ -128,7 +128,7 @@ static void log_write(int level, const char *file,
     va_end(ap);
 
     size_t count = snprintf(buffer, log_buffer_size,
-            "%s\n [%s]\n [%s:%d]%s\n %s\n",
+            "%s [%s] [%s:%d]%s %s\n",
             LOG_LEVEL_NOTE[level], datetime, file, line, log_extra_info, log_buffer);
     int log_fd = log_fp->_fileno;
     //puts(buffer);
