@@ -797,7 +797,7 @@ int main(int argc, char *argv[]) {
     }
     signal(SIGALRM, timeout);
 
-    compiler_source_code();
+    //compiler_source_code();
 
     judge();
 
