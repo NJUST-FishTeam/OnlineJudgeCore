@@ -63,9 +63,10 @@ void parse_arguments(int argc, char* argv[]) {
     int opt;
     extern char *optarg;
 
-    while ((opt = getopt(argc, argv, "c:t:m:d:S:s")) != -1) {
+    while ((opt = getopt(argc, argv, "l:t:m:d:S:s")) != -1) {
         switch (opt) {
-            case 'c': PROBLEM::code_path    = optarg;         break;
+            case 'l': PROBLEM::lang         = atoi(optarg);   break;
+            //case 'c': PROBLEM::code_path    = optarg;         break;
             case 't': PROBLEM::time_limit   = atoi(optarg);   break;
             case 'm': PROBLEM::memory_limit = atoi(optarg);   break;
             case 's': PROBLEM::spj          = true;           break;
@@ -77,16 +78,16 @@ void parse_arguments(int argc, char* argv[]) {
         }
     }
 
-    if (has_suffix(PROBLEM::code_path, ".cpp")) {
-        PROBLEM::lang = JUDGE_CONF::LANG_CPP;
-    } else if (has_suffix(PROBLEM::code_path, ".c")) {
-        PROBLEM::lang = JUDGE_CONF::LANG_C;
-    } else if (has_suffix(PROBLEM::code_path, ".java")) {
-        PROBLEM::lang = JUDGE_CONF::LANG_JAVA;
-    } else {
-        FM_LOG_WARNING("It seems that you give me a language which I do not known now: %d", PROBLEM::lang);
-        exit(JUDGE_CONF::EXIT_BAD_PARAM);
-    }
+    //if (has_suffix(PROBLEM::code_path, ".cpp")) {
+    //    PROBLEM::lang = JUDGE_CONF::LANG_CPP;
+    //} else if (has_suffix(PROBLEM::code_path, ".c")) {
+    //    PROBLEM::lang = JUDGE_CONF::LANG_C;
+    //} else if (has_suffix(PROBLEM::code_path, ".java")) {
+    //    PROBLEM::lang = JUDGE_CONF::LANG_JAVA;
+    //} else {
+    //    FM_LOG_WARNING("It seems that you give me a language which I do not known now: %d", PROBLEM::lang);
+    //    exit(JUDGE_CONF::EXIT_BAD_PARAM);
+    //}
 
     PROBLEM::exec_file = PROBLEM::run_dir + "/a.out";
     PROBLEM::input_file = PROBLEM::run_dir + "/in.in";
