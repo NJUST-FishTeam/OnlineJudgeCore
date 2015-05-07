@@ -385,7 +385,7 @@ void compiler_source_code() {
                 FM_LOG_TRACE("Start: g++ -o %s %s -static -w -lm -O2 -DONLINE_JUDGE",
                         PROBLEM::exec_file.c_str(), PROBLEM::code_path.c_str());
                 execlp("g++", "g++", "-o", PROBLEM::exec_file.c_str(), PROBLEM::code_path.c_str(),
-                        "-static", "-w", "-lm", "-O2", "-DONLINE_JUDGE", NULL);
+                        "-static", "-w", "-lm", "-O2", "std=c++11", "-DONLINE_JUDGE", NULL);
                 break;
             case JUDGE_CONF::LANG_JAVA:
                 FM_LOG_TRACE("Start:javac %s -d %s", PROBLEM::code_path.c_str(), PROBLEM::run_dir.c_str());
