@@ -714,6 +714,16 @@ int compare_output(std::string file_std, std::string file_exec) {
 
 static
 void run_spj() {
+    // support ljudge style special judge
+    const char origin_name[3][16] = {"./in.in", "./out.out", "./out.txt"};
+    const char target_name[4][16] = {"/input", "/output", "/user_output", "/user_code"};
+    for (int i = 0; i < 4; i++)
+    {
+        std::string origin_path = (i != 3) ? origin_name[i] : PROBLEM::code_path;
+        std::string target_path = PROBLEM::run_dir + target_name[i];
+        if (EXIT_SUCCESS != symlink(origin_path.c_str(), target_path.c_str()))
+            FM_LOG_WARNING("Create symbolic link from '%s' to '%s' failed,%d:%s.", origin_path.c_str(), target_path.c_str(), errno, strerror(errno));
+    }
     pid_t spj_pid = fork();
     int status = 0;
     if (spj_pid < 0) {
@@ -721,7 +731,7 @@ void run_spj() {
         exit(JUDGE_CONF::EXIT_COMPARE_SPJ);
     } else if (spj_pid == 0) {
         FM_LOG_TRACE("Woo, I will start special judge!");
-        stdin = freopen(PROBLEM::exec_output.c_str(), "r", stdin);
+        stdin = freopen(PROBLEM::input_file.c_str(), "r", stdin); // ljudge style
         stdout = freopen(PROBLEM::spj_output_file.c_str(), "w", stdout);
         if (stdin == NULL || stdout == NULL) {
             FM_LOG_WARNING("redirect io in spj failed.");
@@ -736,7 +746,7 @@ void run_spj() {
         security_control_spj();
 
         if (PROBLEM::spj_lang != JUDGE_CONF::LANG_JAVA) {
-            execl("./SpecialJudge", "SpecialJudge", NULL);
+            execl("./SpecialJudge", "SpecialJudge", "user_output", NULL);
         } else {
             execlp("java", "java", "SpecialJudge", NULL);
         }
@@ -749,8 +759,21 @@ void run_spj() {
         }
 
         if (WIFEXITED(status)) {
-            if (WEXITSTATUS(status) == EXIT_SUCCESS) {
+            int spj_exit_code = WEXITSTATUS(status);
+            if (spj_exit_code >= 0 && spj_exit_code < 4) {
                 FM_LOG_TRACE("Well, SpecialJudge program normally quit.All is good.");
+                // 获取SPJ结果
+                switch (spj_exit_code) {
+                case 0:
+                    PROBLEM::result = JUDGE_CONF::AC;
+                    break;
+                case 1:
+                    PROBLEM::result = JUDGE_CONF::WA;
+                    break;
+                case 2:
+                    PROBLEM::result = JUDGE_CONF::PE;
+                    break;
+                }
                 return ;
             } else {
                 FM_LOG_WARNING("I am sorry to tell you that the special judge program abnormally terminated. %d", WEXITSTATUS(status));
@@ -760,18 +783,6 @@ void run_spj() {
         } else {
             FM_LOG_WARNING("Actually, I do not kwon why the special judge program dead.");
         }
-    }
-}
-
-static
-void get_spj_result() {
-    FILE *spj_result = fopen(PROBLEM::spj_output_file.c_str(), "r");
-    char tmp[10];
-    fgets(tmp, sizeof(tmp), spj_result);
-    if (!strcmp(tmp, "AC\n")) {
-        PROBLEM::result = JUDGE_CONF::AC;
-    } else {
-        PROBLEM::result = JUDGE_CONF::WA;
     }
 }
 
@@ -803,7 +814,6 @@ int main(int argc, char *argv[]) {
 
     if (PROBLEM::spj) {
         run_spj();
-        get_spj_result();
     } else {
         if (PROBLEM::result == JUDGE_CONF::SE)
             PROBLEM::result = compare_output(PROBLEM::output_file, PROBLEM::exec_output);
