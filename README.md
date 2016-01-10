@@ -50,8 +50,51 @@ NJUST Open Judge 判题核心(Linux平台)
 
 标准输入文件是`in.in`，标准输出文件是`out.out`，程序运行返回的结果是`result.txt`文件
 
-SpecialJudge程序是一个已经编译好的程序，名字叫`SpecialJudge`。运行结束后请自行清理`./test/`文件夹
-下的各种文件
+## SpecialJudge
+SpecialJudge程序是一个已经编译好的程序，名字叫`SpecialJudge`。运行结束后请自行清理`./test/`文件夹下的各种文件
+
+SpecialJudge 程序编写标准与[ljudge](https://github.com/quark-zju/ljudge)兼容
+
+SpecialJudge 程序的标准流（stdin）是题目的输入数据，同时Special程序还可以打开以下几个文件
+
+- `"input"`：输入数据（也可直接由stdin读入）
+- `"output"`：输出数据
+- `"user_output"` (或者argv[1]): 用户程序给出的输出
+- `"user_code"` : 用户的程序代码
+
+SpecialJudge 程序需要使用 exitcode 返回评测结果，0 代表 Accepted， 1 代表Wrong Answer， 2 代表Presentation Error
+
+下面是一个SpecialJudge 程序的样例，检测T个Case中用户输入的两个数是的是否等于标准输出
+
+```cpp
+#include <iostream>
+#include <fstream>
+using namespace std;
+const int res_ac = 0;
+const int res_wa = 1;
+const int res_pe = 2;
+int T;
+int main()
+{
+	ifstream input("input", ios::in);
+	ifstream output("output", ios::in);
+	ifstream user_output("user_output", ios::in);
+	ifstream user_code("user_code", ios::in);
+	int user_ans = 0;
+	bool flag = true;
+	input >> T;
+	while (T--)
+	{
+		int a, b, c;
+		user_output >> a >> b;
+		output >> c;
+		flag &= (a + b == c);
+	}
+	if (flag) return res_ac;
+	else return res_wa;
+}
+```
+
 
 ## result.txt
 
