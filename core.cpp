@@ -687,20 +687,16 @@ int compare_output(std::string file_std, std::string file_exec) {
             status = PE;
             //过滤空白字符
             if (is_space_char(a) && is_space_char(b)) {
-                FM_LOG_DEBUG("1");
                 continue;
             }
             if (is_space_char(a)) {
                 //a是空白字符，过滤，退回b以便下一轮循环
-                FM_LOG_DEBUG("2");
                 ungetc(b, fp_exe);
                 Nb--;
             } else if (is_space_char(b)) {
-                FM_LOG_DEBUG("3");
                 ungetc(a, fp_std);
                 Na--;
             } else {
-                FM_LOG_DEBUG("4");
                 FM_LOG_TRACE("Well, Wrong Answer.");
                 status = WA;
                 break;
