@@ -65,18 +65,18 @@ void parse_arguments(int argc, char* argv[]) {
 
     while ((opt = getopt(argc, argv, "c:t:m:d:S:s")) != -1) {
         switch (opt) {
-            case 'c': PROBLEM::code_path    = optarg;         break;
-            case 't': PROBLEM::time_limit   = atoi(optarg);   break;
-            case 'm': PROBLEM::memory_limit = atoi(optarg);   break;
-            case 's': PROBLEM::spj          = true;           break;
-            case 'S': PROBLEM::spj_lang     = atoi(optarg);   break;
-            case 'd': PROBLEM::run_dir      = optarg;         break;
+            case 'c': PROBLEM::code_path    = optarg;         break; // 待评测的代码路径
+            case 't': PROBLEM::time_limit   = atoi(optarg);   break; // 时间限制 单位MS
+            case 'm': PROBLEM::memory_limit = atoi(optarg);   break; // 内存限制 单位KB
+            case 's': PROBLEM::spj          = true;           break; // 是否使用SpecialJudge
+            case 'S': PROBLEM::spj_lang     = atoi(optarg);   break; // SPJ的语言类型
+            case 'd': PROBLEM::run_dir      = optarg;         break; // 运行在什么文件夹,沙箱
             default:
                 FM_LOG_WARNING("Unknown option provided: -%c %s", opt, optarg);
                 exit(JUDGE_CONF::EXIT_BAD_PARAM);
         }
     }
-
+    // 判断语言类型
     if (has_suffix(PROBLEM::code_path, ".cpp")) {
         PROBLEM::lang = JUDGE_CONF::LANG_CPP;
     } else if (has_suffix(PROBLEM::code_path, ".c")) {
@@ -135,7 +135,12 @@ void timeout(int signo) {
         exit(JUDGE_CONF::EXIT_TIMEOUT);
     }
 }
-
+/**
+ * 设置编译时间限制
+ * @param which
+ * @param milliseconds
+ * @return
+ */
 static
 int malarm(int which, int milliseconds) {
     struct itimerval t;
@@ -147,7 +152,7 @@ int malarm(int which, int milliseconds) {
     return setitimer(which, &t, NULL);
 }
 
-/*
+/**
  * 输入输出重定向
  */
 static
@@ -164,25 +169,27 @@ void io_redirect() {
     FM_LOG_TRACE("redirect io is OK.");
 }
 
-/*
+/**
  * 安全性控制
  * chroot限制程序只能在某目录下操作，无法影响到外界
  * setuid使其只拥有nobody的最低系统权限
  */
 static
 void security_control() {
+    // 获得用户的登录信息
     struct passwd *nobody = getpwnam("nobody");
+    // nobody 不存在报错
     if (nobody == NULL){
         FM_LOG_WARNING("Well, where is nobody? I cannot live without him. %d: %s", errno, strerror(errno));
         exit(JUDGE_CONF::EXIT_SET_SECURITY);
     }
 
-    //chdir
+    //chdir 沙箱目录不存在报错
     if (EXIT_SUCCESS != chdir(PROBLEM::run_dir.c_str())) {
         FM_LOG_WARNING("chdir(%s) failed, %d: %s", PROBLEM::run_dir.c_str(), errno, strerror(errno));
         exit(JUDGE_CONF::EXIT_SET_SECURITY);
     }
-
+    // 获取当前目录的绝对路径
     char cwd[1024], *tmp = getcwd(cwd, 1024);
     if (tmp == NULL) {
         FM_LOG_WARNING("Oh, where i am now? I cannot getcwd. %d: %s", errno, strerror(errno));
