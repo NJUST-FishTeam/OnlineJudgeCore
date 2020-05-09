@@ -63,7 +63,7 @@ void parse_arguments(int argc, char* argv[]) {
     int opt;
     extern char *optarg;
 
-    while ((opt = getopt(argc, argv, "c:t:m:d:S:s")) != -1) {
+    while ((opt = getopt(argc, argv, "c:t:m:d:S:s:l")) != -1) {
         switch (opt) {
             case 'c': PROBLEM::code_path    = optarg;         break; // 待评测的代码路径
             case 't': PROBLEM::time_limit   = atoi(optarg);   break; // 时间限制 单位MS
@@ -71,6 +71,7 @@ void parse_arguments(int argc, char* argv[]) {
             case 's': PROBLEM::spj          = true;           break; // 是否使用SpecialJudge
             case 'S': PROBLEM::spj_lang     = atoi(optarg);   break; // SPJ的语言类型
             case 'd': PROBLEM::run_dir      = optarg;         break; // 运行在什么文件夹,沙箱
+            case 'l':
             default:
                 FM_LOG_WARNING("Unknown option provided: -%c %s", opt, optarg);
                 exit(JUDGE_CONF::EXIT_BAD_PARAM);
@@ -108,7 +109,7 @@ void parse_arguments(int argc, char* argv[]) {
             case 2: PROBLEM::spj_exec_file = PROBLEM::run_dir + "/SpecialJudge";break;
             case 3: PROBLEM::spj_exec_file = PROBLEM::run_dir + "/SpecialJudge";break;
             default:
-                FM_LOG_WARNING("OMG, I really do not kwon the special judge problem language.");
+                FM_LOG_WARNING("OMG, I really do not know the special judge problem language.");
                 exit(JUDGE_CONF::EXIT_BAD_PARAM);
         }
 
@@ -351,7 +352,7 @@ bool is_valid_syscall(int lang, int syscall_id, pid_t child, user_regs_struct re
     } else if (RF_table[syscall_id] > 0) {
         //如果RF_table中对应的syscall_id可被调用的次数>0
         //且是在退出syscall的时候, 那么次数减一
-        if (in_syscall == false)
+        if (!in_syscall)
             RF_table[syscall_id]--;
     } else {
         //RF_table中syscall_id对应的指<0, 表示是不限制调用的
@@ -590,7 +591,7 @@ void judge() {
                     FM_LOG_WARNING("The glibc failed.");
                 } else {
                     //FM_LOG_WARNING("%d\n", SYS_write);
-                    FM_LOG_WARNING("restricted fuction table");
+                    FM_LOG_WARNING("restricted function table");
                 }
                 PROBLEM::result = JUDGE_CONF::RE;
                 ptrace(PTRACE_KILL, executive, NULL, NULL);
@@ -784,12 +785,14 @@ void run_spj() {
         } else if (WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM) {
             FM_LOG_WARNING("Well, the special judge program consume too much time.");
         } else {
-            FM_LOG_WARNING("Actually, I do not kwon why the special judge program dead.");
+            FM_LOG_WARNING("Actually, I do not know why the special judge program dead.");
         }
     }
 }
 
 int main(int argc, char *argv[]) {
+
+    parse_arguments(argc, argv);
 
     log_open("./core_log.txt"); //或许写成参数更好，懒得写了
 
@@ -800,8 +803,6 @@ int main(int argc, char *argv[]) {
         FM_LOG_FATAL("You must run this program as root.");
         exit(JUDGE_CONF::EXIT_UNPRIVILEGED);
     }
-
-    parse_arguments(argc, argv);
 
     JUDGE_CONF::JUDGE_TIME_LIMIT += PROBLEM::time_limit;
 

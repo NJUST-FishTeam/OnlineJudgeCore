@@ -64,6 +64,8 @@ const int LANG_UNKNOWN = 0;
 const int LANG_C       = 1;
 const int LANG_CPP     = 2;
 const int LANG_JAVA    = 3;
+//LOG日志保存的位置
+std::string  LOG_DIR = "./core_log.txt";
 }
 
 namespace PROBLEM
