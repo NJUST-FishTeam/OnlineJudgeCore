@@ -438,7 +438,7 @@ void compiler_source_code() {
             } else if (WIFSTOPPED(status)){
                 FM_LOG_WARNING("The compile process stopped by signal");
             } else {
-                FM_LOG_WARNING("I don't kwon why the compile process stopped");
+                FM_LOG_WARNING("I don't know why the compile process stopped");
             }
             exit(JUDGE_CONF::EXIT_COMPILE);
         }
