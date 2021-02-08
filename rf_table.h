@@ -137,6 +137,9 @@ int RF_JAVA[512] =
     SYS_stat64,         -1,
     SYS_ugetrlimit,     -1,
     SYS_uname,          -1,
+    257, -1,
+    302, -1,
+    39, -1,
     -1
 };
 
@@ -252,6 +255,9 @@ int RF_JAVA[512] =
     SYS_writev,         -1,
     SYS_time,           -1,
     SYS_readlink,       -1,
+    257, -1,
+    302, -1,
+    39, -1,
     -1
 };
 #endif

@@ -304,7 +304,7 @@ static bool in_syscall = true;
 static
 bool is_valid_syscall(int lang, int syscall_id, pid_t child, user_regs_struct regs) {
     in_syscall = !in_syscall;
-    //FM_LOG_DEBUG("syscall: %d, %s, count: %d", syscall_id, in_syscall?"in":"out", RF_table[syscall_id]);
+    FM_LOG_DEBUG("syscall: %d, %s, count: %d", syscall_id, in_syscall?"in":"out", RF_table[syscall_id]);
     if (RF_table[syscall_id] == 0)
     {
         //如果RF_table中对应的syscall_id可以被调用的次数为0, 则为RF
@@ -502,7 +502,7 @@ void judge() {
 
                     //PROBLEM::result = JUDGE_CONF::PROCEED;
                 } else {
-                    FM_LOG_WARNING("oh, some error occured.Abnormal quit.");
+                    FM_LOG_WARNING("oh, some error occurred.Abnormal quit.");
                     PROBLEM::result = JUDGE_CONF::RE;
                 }
                 break;
@@ -526,7 +526,7 @@ void judge() {
                     case SIGXCPU:
                     case SIGVTALRM:
                     case SIGKILL:
-                        FM_LOG_TRACE("Well, Time Limit Exeeded");
+                        FM_LOG_TRACE("Well, Time Limit Exceeded");
                         PROBLEM::time_usage = 0;
                         PROBLEM::memory_usage = 0;
                         PROBLEM::result = JUDGE_CONF::TLE;
@@ -541,13 +541,13 @@ void judge() {
                     case SIGFPE:
                     case SIGBUS:
                     case SIGABRT:
-                        //FM_LOG_TRACE("RE了");
+                        FM_LOG_TRACE("RE了");
                         PROBLEM::time_usage = 0;
                         PROBLEM::memory_usage = 0;
                         PROBLEM::result = JUDGE_CONF::RE;
                         break;
                     default:
-                        //FM_LOG_TRACE("不知道哪儿跪了");
+                        FM_LOG_TRACE("不知道哪儿跪了");
                         PROBLEM::time_usage = 0;
                         PROBLEM::memory_usage = 0;
                         PROBLEM::result = JUDGE_CONF::RE;
@@ -573,7 +573,7 @@ void judge() {
 
             //获得子进程的寄存器，目的是为了获知其系统调用
             if (ptrace(PTRACE_GETREGS, executive, NULL, &regs) < 0) {
-                FM_LOG_WARNING("ptrace PTRACE_GETREGS failed");
+                FM_LOG_WARNING("ptrace PTRACE_GETARGS failed");
                 exit(JUDGE_CONF::EXIT_JUDGE);
             }
 
@@ -585,11 +585,11 @@ void judge() {
             //检查系统调用是否合法
             if (syscall_id > 0 &&
                 !is_valid_syscall(PROBLEM::lang, syscall_id, executive, regs)) {
-                FM_LOG_WARNING("restricted fuction %d\n", syscall_id);
+                FM_LOG_WARNING("restricted function %d\n", syscall_id);
                 if (syscall_id == SYS_rt_sigprocmask){
                     FM_LOG_WARNING("The glibc failed.");
                 } else {
-                    //FM_LOG_WARNING("%d\n", SYS_write);
+                    FM_LOG_WARNING("%d\n", is_valid_syscall(PROBLEM::lang, syscall_id, executive, regs));
                     FM_LOG_WARNING("restricted function table");
                 }
                 PROBLEM::result = JUDGE_CONF::RE;
