@@ -254,8 +254,6 @@ int RF_JAVA[512] =
     SYS_time,           -1,
     SYS_readlink,       -1,
     SYS_prctl,          -1,
-    302, -1,
-    39, -1,
     -1
 };
 #endif
