@@ -137,8 +137,7 @@ int RF_JAVA[512] =
     SYS_stat64,         -1,
     SYS_ugetrlimit,     -1,
     SYS_uname,          -1,
-    SYS_prctl,          -1,
-    157      ，         -1,	
+    SYS_prctl,          -1,	
     -1
 };
 
