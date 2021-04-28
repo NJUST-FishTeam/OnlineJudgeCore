@@ -64,7 +64,6 @@ const int LANG_UNKNOWN = 0;
 const int LANG_C       = 1;
 const int LANG_CPP     = 2;
 const int LANG_JAVA    = 3;
-
 }
 
 namespace PROBLEM
@@ -72,7 +71,7 @@ namespace PROBLEM
 int id           = 0; //貌似没用上
 int lang         = 0; //待评测的程序语言
 int spj_lang     = 0; //SpecialJudge程序的语言
-int time_limit   = 1000;   //MS
+int time_limit   = 1000;   //MS 毫秒
 int memory_limit = 65535;  //KB
 int output_limit = 1024000; //KB，输出文件的大小限制
 int result       = JUDGE_CONF::SE; //结果代号

@@ -48,7 +48,7 @@ int RF_C[512] =
     SYS_uname,          -1,
     SYS_write,          -1,
     SYS_writev,         -1,
-	201,				-1,
+	   201,		-1,
     -1
 };
 
@@ -72,7 +72,7 @@ int RF_CPP[512] =
     SYS_uname,          -1,
     SYS_write,          -1,
     SYS_writev,         -1,
-	201,				-1,
+	201,		-1,
     -1
 };
 
@@ -137,6 +137,7 @@ int RF_JAVA[512] =
     SYS_stat64,         -1,
     SYS_ugetrlimit,     -1,
     SYS_uname,          -1,
+    SYS_prctl,          -1,	
     -1
 };
 
@@ -252,6 +253,7 @@ int RF_JAVA[512] =
     SYS_writev,         -1,
     SYS_time,           -1,
     SYS_readlink,       -1,
+    SYS_prctl,          -1,
     -1
 };
 #endif

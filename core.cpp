@@ -65,18 +65,18 @@ void parse_arguments(int argc, char* argv[]) {
 
     while ((opt = getopt(argc, argv, "c:t:m:d:S:s")) != -1) {
         switch (opt) {
-            case 'c': PROBLEM::code_path    = optarg;         break;
-            case 't': PROBLEM::time_limit   = atoi(optarg);   break;
-            case 'm': PROBLEM::memory_limit = atoi(optarg);   break;
-            case 's': PROBLEM::spj          = true;           break;
-            case 'S': PROBLEM::spj_lang     = atoi(optarg);   break;
-            case 'd': PROBLEM::run_dir      = optarg;         break;
+            case 'c': PROBLEM::code_path    = optarg;         break; // 待评测的代码路径
+            case 't': PROBLEM::time_limit   = atoi(optarg);   break; // 时间限制 单位MS
+            case 'm': PROBLEM::memory_limit = atoi(optarg);   break; // 内存限制 单位KB
+            case 's': PROBLEM::spj          = true;           break; // 是否使用SpecialJudge
+            case 'S': PROBLEM::spj_lang     = atoi(optarg);   break; // SPJ的语言类型
+            case 'd': PROBLEM::run_dir      = optarg;         break; // 运行在什么文件夹,沙箱
             default:
                 FM_LOG_WARNING("Unknown option provided: -%c %s", opt, optarg);
                 exit(JUDGE_CONF::EXIT_BAD_PARAM);
         }
     }
-
+    // 判断语言类型
     if (has_suffix(PROBLEM::code_path, ".cpp")) {
         PROBLEM::lang = JUDGE_CONF::LANG_CPP;
     } else if (has_suffix(PROBLEM::code_path, ".c")) {
@@ -108,7 +108,7 @@ void parse_arguments(int argc, char* argv[]) {
             case 2: PROBLEM::spj_exec_file = PROBLEM::run_dir + "/SpecialJudge";break;
             case 3: PROBLEM::spj_exec_file = PROBLEM::run_dir + "/SpecialJudge";break;
             default:
-                FM_LOG_WARNING("OMG, I really do not kwon the special judge problem language.");
+                FM_LOG_WARNING("OMG, I really do not know the special judge problem language.");
                 exit(JUDGE_CONF::EXIT_BAD_PARAM);
         }
 
@@ -135,7 +135,12 @@ void timeout(int signo) {
         exit(JUDGE_CONF::EXIT_TIMEOUT);
     }
 }
-
+/**
+ * 设置编译时间限制
+ * @param which
+ * @param milliseconds
+ * @return
+ */
 static
 int malarm(int which, int milliseconds) {
     struct itimerval t;
@@ -147,7 +152,7 @@ int malarm(int which, int milliseconds) {
     return setitimer(which, &t, NULL);
 }
 
-/*
+/**
  * 输入输出重定向
  */
 static
@@ -164,25 +169,27 @@ void io_redirect() {
     FM_LOG_TRACE("redirect io is OK.");
 }
 
-/*
+/**
  * 安全性控制
  * chroot限制程序只能在某目录下操作，无法影响到外界
  * setuid使其只拥有nobody的最低系统权限
  */
 static
 void security_control() {
+    // 获得用户的登录信息
     struct passwd *nobody = getpwnam("nobody");
+    // nobody 不存在报错
     if (nobody == NULL){
         FM_LOG_WARNING("Well, where is nobody? I cannot live without him. %d: %s", errno, strerror(errno));
         exit(JUDGE_CONF::EXIT_SET_SECURITY);
     }
 
-    //chdir
+    //chdir 沙箱目录不存在报错
     if (EXIT_SUCCESS != chdir(PROBLEM::run_dir.c_str())) {
         FM_LOG_WARNING("chdir(%s) failed, %d: %s", PROBLEM::run_dir.c_str(), errno, strerror(errno));
         exit(JUDGE_CONF::EXIT_SET_SECURITY);
     }
-
+    // 获取当前目录的绝对路径
     char cwd[1024], *tmp = getcwd(cwd, 1024);
     if (tmp == NULL) {
         FM_LOG_WARNING("Oh, where i am now? I cannot getcwd. %d: %s", errno, strerror(errno));
@@ -297,7 +304,7 @@ static bool in_syscall = true;
 static
 bool is_valid_syscall(int lang, int syscall_id, pid_t child, user_regs_struct regs) {
     in_syscall = !in_syscall;
-    //FM_LOG_DEBUG("syscall: %d, %s, count: %d", syscall_id, in_syscall?"in":"out", RF_table[syscall_id]);
+    FM_LOG_DEBUG("syscall: %d, %s, count: %d", syscall_id, in_syscall?"in":"out", RF_table[syscall_id]);
     if (RF_table[syscall_id] == 0)
     {
         //如果RF_table中对应的syscall_id可以被调用的次数为0, 则为RF
@@ -344,7 +351,7 @@ bool is_valid_syscall(int lang, int syscall_id, pid_t child, user_regs_struct re
     } else if (RF_table[syscall_id] > 0) {
         //如果RF_table中对应的syscall_id可被调用的次数>0
         //且是在退出syscall的时候, 那么次数减一
-        if (in_syscall == false)
+        if (!in_syscall)
             RF_table[syscall_id]--;
     } else {
         //RF_table中syscall_id对应的指<0, 表示是不限制调用的
@@ -431,7 +438,7 @@ void compiler_source_code() {
             } else if (WIFSTOPPED(status)){
                 FM_LOG_WARNING("The compile process stopped by signal");
             } else {
-                FM_LOG_WARNING("I don't kwon why the compile process stopped");
+                FM_LOG_WARNING("I don't know why the compile process stopped");
             }
             exit(JUDGE_CONF::EXIT_COMPILE);
         }
@@ -495,7 +502,7 @@ void judge() {
 
                     //PROBLEM::result = JUDGE_CONF::PROCEED;
                 } else {
-                    FM_LOG_WARNING("oh, some error occured.Abnormal quit.");
+                    FM_LOG_WARNING("oh, some error occurred.Abnormal quit.");
                     PROBLEM::result = JUDGE_CONF::RE;
                 }
                 break;
@@ -519,7 +526,7 @@ void judge() {
                     case SIGXCPU:
                     case SIGVTALRM:
                     case SIGKILL:
-                        FM_LOG_TRACE("Well, Time Limit Exeeded");
+                        FM_LOG_TRACE("Well, Time Limit Exceeded");
                         PROBLEM::time_usage = 0;
                         PROBLEM::memory_usage = 0;
                         PROBLEM::result = JUDGE_CONF::TLE;
@@ -534,13 +541,13 @@ void judge() {
                     case SIGFPE:
                     case SIGBUS:
                     case SIGABRT:
-                        //FM_LOG_TRACE("RE了");
+                        FM_LOG_TRACE("RE了");
                         PROBLEM::time_usage = 0;
                         PROBLEM::memory_usage = 0;
                         PROBLEM::result = JUDGE_CONF::RE;
                         break;
                     default:
-                        //FM_LOG_TRACE("不知道哪儿跪了");
+                        FM_LOG_TRACE("不知道哪儿跪了");
                         PROBLEM::time_usage = 0;
                         PROBLEM::memory_usage = 0;
                         PROBLEM::result = JUDGE_CONF::RE;
@@ -566,7 +573,7 @@ void judge() {
 
             //获得子进程的寄存器，目的是为了获知其系统调用
             if (ptrace(PTRACE_GETREGS, executive, NULL, &regs) < 0) {
-                FM_LOG_WARNING("ptrace PTRACE_GETREGS failed");
+                FM_LOG_WARNING("ptrace PTRACE_GETARGS failed");
                 exit(JUDGE_CONF::EXIT_JUDGE);
             }
 
@@ -578,12 +585,12 @@ void judge() {
             //检查系统调用是否合法
             if (syscall_id > 0 &&
                 !is_valid_syscall(PROBLEM::lang, syscall_id, executive, regs)) {
-                FM_LOG_WARNING("restricted fuction %d\n", syscall_id);
+                FM_LOG_WARNING("restricted function %d\n", syscall_id);
                 if (syscall_id == SYS_rt_sigprocmask){
                     FM_LOG_WARNING("The glibc failed.");
                 } else {
-                    //FM_LOG_WARNING("%d\n", SYS_write);
-                    FM_LOG_WARNING("restricted fuction table");
+                    FM_LOG_WARNING("%d\n", is_valid_syscall(PROBLEM::lang, syscall_id, executive, regs));
+                    FM_LOG_WARNING("restricted function table");
                 }
                 PROBLEM::result = JUDGE_CONF::RE;
                 ptrace(PTRACE_KILL, executive, NULL, NULL);
@@ -777,12 +784,14 @@ void run_spj() {
         } else if (WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM) {
             FM_LOG_WARNING("Well, the special judge program consume too much time.");
         } else {
-            FM_LOG_WARNING("Actually, I do not kwon why the special judge program dead.");
+            FM_LOG_WARNING("Actually, I do not know why the special judge program dead.");
         }
     }
 }
 
 int main(int argc, char *argv[]) {
+
+    parse_arguments(argc, argv);
 
     log_open("./core_log.txt"); //或许写成参数更好，懒得写了
 
@@ -793,8 +802,6 @@ int main(int argc, char *argv[]) {
         FM_LOG_FATAL("You must run this program as root.");
         exit(JUDGE_CONF::EXIT_UNPRIVILEGED);
     }
-
-    parse_arguments(argc, argv);
 
     JUDGE_CONF::JUDGE_TIME_LIMIT += PROBLEM::time_limit;
 
